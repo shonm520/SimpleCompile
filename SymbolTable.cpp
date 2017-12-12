@@ -33,7 +33,7 @@ void SymbolTable::classesTableInsert(Parser::TreeNode *t)
     {
         map<string, Info> temp;
         _vtClassesTable.push_back(temp);
-        _strCurrentClass = t->getChildByIndex(0)->getLexeme();
+        _strCurrentClass = t->getName();
         int index = _vtClassesTable.size() - 1;
         _mapClassIndex.insert({_strCurrentClass, index});
         _static_index = _field_index = 0;
@@ -65,30 +65,31 @@ void SymbolTable::classesTableInsert(Parser::TreeNode *t)
     else if (t->getNodeKind() == Parser::SUBROUTINE_DEC_K)           // t = SUBROUTINE_DEC_K
     {                                                           // t->getChildByIndex(0) = function
         Info info;                                              // t->getChildByIndex(1) = type
-        if (t->getChildByIndex(0)->getLexeme() == "function")            // t->getChildByIndex(2) = functionName
+		string signName = t->getSignName();
+		if (signName == "function")            // t->getChildByIndex(2) = functionName
             info.kind = FUNCTION;                               // t->getChildByIndex(3) = arg - arg - arg ...
-        else if (t->getChildByIndex(0)->getLexeme() == "method")
+		else if (signName == "method")
             info.kind = METHOD;
-        else if (t->getChildByIndex(0)->getLexeme() == "constructor")
+		else if (signName == "constructor")
             info.kind = CONSTRUCTOR;
-        info.type = t->getChildByIndex(1)->getLexeme();
-        for (auto p = t->getChildByIndex(3); p != nullptr; p = p->getNextNode())
+		info.type = ((SubroutineDecNode*)t)->getRetType();
+		for (auto p = ((SubroutineDecNode*)t)->getFirstParam(); p != nullptr; p = p->getNextNode())
         {
-            string type = p->getChildByIndex(0)->getLexeme();
+			string type = p->getChildByIndex(ParamNode::EVarDec::Param_Type)->getLexeme();
             info.args.push_back(type);
         }
-        string name = Parser::getFunctionName(t->getChildByIndex(2)->getLexeme());
+        string name = Parser::getFunctionName(t->getName());
         if (_vtClassesTable.back().insert({ name, info }).second == false)
         {
-            error3(_strCurrentClass, t->getChildByIndex(0)->getRow(), info.type, name);
+			error3(_strCurrentClass, t->getChildByIndex(SubroutineDecNode::SubroutineFiled::Sign)->getRow(), info.type, name);
         }
     }
 }
 
 void SymbolTable::subroutineTableInsert(Parser::TreeNode *t)
 {
-    if (t->getNodeKind() == Parser::CLASS_K)
-        _strCurrentClass = t->getChildByIndex(0)->getLexeme();
+	if (t->getNodeKind() == Parser::CLASS_K)
+		_strCurrentClass = t->getName();
     else if (t->getNodeKind() == GramTreeNodeBase::SUBROUTINE_DEC_K)                               // t = SUBROUTINE_DEC_K
     {                                                                               // t->getChildByIndex(0) = function
         initialSubroutineTable();                                                   // t->getChildByIndex(1) = type
@@ -105,21 +106,21 @@ void SymbolTable::subroutineTableInsert(Parser::TreeNode *t)
         Info info;                                  
         info.kind = ARG;
         info.index = _arg_index++;
-        info.type = t->getChildByIndex(0)->getLexeme();
+        info.type = t->getChildByIndex(ParamNode::EVarDec::Param_Type)->getLexeme();
         if (info.type != "int" && info.type != "char" && 
             info.type != "void" && info.type != "string" && info.type != "boolean")     // 如果不是基本类型
         {
             if (classIndexFind(info.type) == false)     // 也不是类类型
             {
-                error4(_strCurrentClass, t->getChildByIndex(1)->getRow(), info.type);
+				error4(_strCurrentClass, t->getChildByIndex(ParamNode::EVarDec::Param_Name)->getRow(), info.type);
                 return;
             }
         }
         // 再检查varName是否合理
-        string varName = t->getChildByIndex(1)->getLexeme();
+		string varName = t->getChildByIndex(ParamNode::EVarDec::Param_Name)->getLexeme();
         if (_mapSubroutineTable.insert({ varName, info }).second == false)
         {
-            error2(_strCurrentClass, t->getChildByIndex(1)->getRow(), info.type, varName);
+			error2(_strCurrentClass, t->getChildByIndex(ParamNode::EVarDec::Param_Name)->getRow(), info.type, varName);
             return;
         }
     }

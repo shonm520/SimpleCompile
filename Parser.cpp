@@ -372,11 +372,8 @@ Loop:
 
 Parser::TreeNode *Parser::parse_var_dec()
 {
-	TreeNode *t = new TreeNode(VAR_DEC_K);
-	t->setNodeKind(VAR_DEC_K);
+	TreeNode *t = new VarDecNode();
 	Scanner::Token token;
-	//t->child[0] = parse_type();
-	//t->child[1] = parse_var_name_list();
 	t->addChild(parse_type(), 0);
 	t->addChild(parse_var_name_list(), 1);
 	token = getToken();
