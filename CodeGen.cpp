@@ -24,22 +24,22 @@ void CodeGen::write(Parser::TreeNode *t)
         for (int i = 0; i < 5; i++)
         {
             depth++;
-            write(t->GetChildByIndex(i));
+            write(t->getChildByIndex(i));
             depth--;
         }
-        t = t->GetNextNode();
+        t = t->getNextNode();
     }
 }
 
 void CodeGen::translate(Parser::TreeNode *t)
 {
-    switch (t->GetNodeKind())
+    switch (t->getNodeKind())
     {
     case Parser::CLASS_K:
     {
         fout.close();
         string path = "./api/";
-        currentClassName = t->GetChildByIndex(0)->GetLexeme();
+        currentClassName = t->getChildByIndex(0)->getLexeme();
         if (currentClassName == "Sys" || currentClassName == "Memory" || currentClassName == "Math" ||
                 currentClassName == "String" || currentClassName == "Output" || currentClassName == "Input" ||
                 currentClassName == "Array" || currentClassName == "IO")
@@ -51,19 +51,17 @@ void CodeGen::translate(Parser::TreeNode *t)
     case Parser::SUBROUTINE_DEC_K:
     {
         isMethod = false;
-		currentFunctionName = t->GetChild_SubroutineName()->GetLexeme();
-		int nlocals = t->GetFuncLocalsNum();
-// 		for (auto p = t->GetChild_FunctionBody()->GetChild_FunctionBody_VarDec(); p != nullptr; p = p->GetNextNode())
-//             for (auto q = p->GetChildByIndex(1); q != nullptr; q = q->GetNextNode())
-//                 nlocals++;
-		writeFunction(t->GetChild_SubroutineName()->GetLexeme(), nlocals);
-		if (t->GetChild_SubroutineSign()->GetLexeme() == "method")
+		currentFunctionName = t->getName();
+		int nlocals = ((SubroutineDecNode*)t)->getFuncLocalsNum();
+
+		writeFunction(t->getName(), nlocals);
+		if (t->getSignName() == "method")
         {
             writePush(ARG, 0);
             writePop(POINTER, 0);
             isMethod = true;
         }
-		if (t->GetChild_SubroutineSign()->GetLexeme() == "constructor")
+		if (t->getSignName() == "constructor")
         {
             int nFields = symbolTable->getFieldNumber(currentClassName);
             writePush(CONST, nFields);
@@ -74,11 +72,11 @@ void CodeGen::translate(Parser::TreeNode *t)
     }
     case Parser::ASSIGN_K:
     {
-		Parser::TreeNode* pVarNode = t->GetChildByTag("var_name");
-		if (pVarNode->GetNodeKind() == Parser::VAR_K)
+		Parser::TreeNode* pVarNode = t->getChildByTag("var_name");
+		if (pVarNode->getNodeKind() == Parser::VAR_K)
         {
-			writeExpression(t->GetChildByTag("var_rval"));
-			string varName = pVarNode->GetLexeme();
+			writeExpression(t->getChildByTag("var_rval"));
+			string varName = pVarNode->getLexeme();
             SymbolTable::Info info = symbolTable->subroutineTableFind(varName);
             if (info == SymbolTable::None)
                 info = symbolTable->classesTableFind(currentClassName, varName);
@@ -96,10 +94,10 @@ void CodeGen::translate(Parser::TreeNode *t)
             else if (info.kind == SymbolTable::VAR)
                 writePop(LOCAL, info.index);
         }
-		else if (pVarNode->GetNodeKind() == Parser::ARRAY_K)
+		else if (pVarNode->getNodeKind() == Parser::ARRAY_K)
         {
-			writeExpression(pVarNode->GetChildByIndex(0));
-			string varName = pVarNode->GetLexeme();
+			writeExpression(pVarNode->getChildByIndex(0));
+			string varName = pVarNode->getLexeme();
             SymbolTable::Info info = symbolTable->subroutineTableFind(varName);
             if (info == SymbolTable::None)
                 info = symbolTable->classesTableFind(currentClassName, varName);
@@ -117,7 +115,7 @@ void CodeGen::translate(Parser::TreeNode *t)
             else if (info.kind == SymbolTable::VAR)
                 writePush(LOCAL, info.index);
             writeArithmetic(ADD);
-			writeExpression(t->GetChildByTag("var_rval"));
+			writeExpression(t->getChildByTag("var_rval"));
             writePop(TEMP, 0);
             writePop(POINTER, 1);
             writePush(TEMP, 0);
@@ -133,8 +131,8 @@ void CodeGen::translate(Parser::TreeNode *t)
     }
     case Parser::RETURN_STATEMENT_K:
     {
-        if (t->GetChildByIndex(0) != nullptr)
-            writeExpression(t->GetChildByIndex(0));
+        if (t->getChildByIndex(0) != nullptr)
+            writeExpression(t->getChildByIndex(0));
         else
             writePush(CONST, 0);
         writeReturn();
@@ -149,10 +147,10 @@ void CodeGen::translate(Parser::TreeNode *t)
         string whileEnd = "WHILE_END" + ss.str();
 
         writeLabel(whileBegin);
-        writeExpression(t->GetChildByIndex(0));
+        writeExpression(t->getChildByIndex(0));
         writeArithmetic(NOT);
         writeIf(whileEnd);
-        for (auto p = t->GetChildByIndex(1); p != nullptr; p = p->GetNextNode())
+        for (auto p = t->getChildByIndex(1); p != nullptr; p = p->getNextNode())
             translate(p);
         writeGoto(whileBegin);
         writeLabel(whileEnd);
@@ -168,19 +166,19 @@ void CodeGen::translate(Parser::TreeNode *t)
         string L2 = "IF_FALSE" + ss.str();
         string L3 = "IF_END" + ss.str();
 
-        writeExpression(t->GetChildByIndex(0));
+        writeExpression(t->getChildByIndex(0));
         writeIf(L1);
         writeGoto(L2);
         writeLabel(L1);
-        for (auto p = t->GetChildByIndex(1); p != nullptr; p = p->GetNextNode())
+        for (auto p = t->getChildByIndex(1); p != nullptr; p = p->getNextNode())
             translate(p);
-        if (t->GetChildByIndex(2) == nullptr)
+        if (t->getChildByIndex(2) == nullptr)
             writeLabel(L2);
         else
         {
             writeGoto(L3);
             writeLabel(L2);
-            for (auto p = t->GetChildByIndex(2); p != nullptr; p = p->GetNextNode())
+            for (auto p = t->getChildByIndex(2); p != nullptr; p = p->getNextNode())
                 translate(p);
             writeLabel(L3);
         }
@@ -191,16 +189,16 @@ void CodeGen::translate(Parser::TreeNode *t)
 
 void CodeGen::translateCall(Parser::TreeNode *t)
 {
-    if (t->GetChildByIndex(0)->GetNodeKind() == Parser::METHOD_CALL_K)
+    if (t->getChildByIndex(0)->getNodeKind() == Parser::METHOD_CALL_K)
     {
-        if (t->GetLexeme().find('.') == string::npos)     // method() 调用
+        if (t->getLexeme().find('.') == string::npos)     // method() 调用
         {
             writePush(POINTER, 0);
-            t->SetLexeme(currentClassName + "." + t->GetLexeme());
+            t->setLexeme(currentClassName + "." + t->getLexeme());
         }
         else                         // obj.method()调用
         {
-            string objName = Parser::getCallerName(t->GetLexeme());
+            string objName = Parser::getCallerName(t->getLexeme());
             SymbolTable::Info info = symbolTable->subroutineTableFind(objName);
             if (info == SymbolTable::None)
                 info = symbolTable->classesTableFind(currentClassName, objName);
@@ -212,19 +210,19 @@ void CodeGen::translateCall(Parser::TreeNode *t)
                 writePush(ARG, info.index);
             else if (info.kind == SymbolTable::STATIC)
                 writePush(STATIC, info.index);
-            string functionName = Parser::getFunctionName(t->GetLexeme());
-            t->SetLexeme(info.type + "." + functionName);
+            string functionName = Parser::getFunctionName(t->getLexeme());
+            t->setLexeme(info.type + "." + functionName);
         }
     }
     int nArgs = 0;
-    for (auto p = t->GetChildByIndex(0)->GetNextNode(); p != nullptr; p = p->GetNextNode())
+    for (auto p = t->getChildByIndex(0)->getNextNode(); p != nullptr; p = p->getNextNode())
     {
         writeExpression(p);
         nArgs++;
     }
-    if (t->GetChildByIndex(0)->GetNodeKind() == Parser::METHOD_CALL_K)
+    if (t->getChildByIndex(0)->getNodeKind() == Parser::METHOD_CALL_K)
         nArgs++;
-    writeCall(t->GetLexeme(), nArgs);
+    writeCall(t->getLexeme(), nArgs);
 }
 
 // 后序遍历
@@ -233,53 +231,53 @@ void CodeGen::writeExpression(Parser::TreeNode *t)
     if (t != nullptr)
     {
         for (int i = 0; i < 5; i++)
-            writeExpression(t->GetChildByIndex(i));
-        switch (t->GetNodeKind())
+            writeExpression(t->getChildByIndex(i));
+        switch (t->getNodeKind())
         {
         case Parser::OPERATION_K:
-            if (t->GetLexeme() == "+")
+            if (t->getLexeme() == "+")
                 writeArithmetic(ADD);
-            else if (t->GetLexeme() == "-")
+            else if (t->getLexeme() == "-")
                 writeArithmetic(SUB);
-            else if (t->GetLexeme() == "*")
+            else if (t->getLexeme() == "*")
                 writeCall("Math.multiply", 2);
-            else if (t->GetLexeme() == "/")
+            else if (t->getLexeme() == "/")
                 writeCall("Math.divide", 2);
             break;
         case Parser::COMPARE_K:
         {
-            if (t->GetLexeme() == ">")
+            if (t->getLexeme() == ">")
                 writeArithmetic(GT);
-            else if (t->GetLexeme() == "<")
+            else if (t->getLexeme() == "<")
                 writeArithmetic(LT);
-            else if (t->GetLexeme() == "==")
+            else if (t->getLexeme() == "==")
                 writeArithmetic(EQ);
-            else if (t->GetLexeme() == "<=")
+            else if (t->getLexeme() == "<=")
             {
                 writeArithmetic(GT);
                 writeArithmetic(NOT);
             }
-            else if (t->GetLexeme() == ">=")
+            else if (t->getLexeme() == ">=")
             {
                 writeArithmetic(LT);
                 writeArithmetic(NOT);
             }
-            else if (t->GetLexeme() == "!=")
+            else if (t->getLexeme() == "!=")
                 writeArithmetic(NOT);
             break;
         }
         case Parser::BOOL_EXPRESSION_K:
         {
-            if (t->GetLexeme() == "&")
+            if (t->getLexeme() == "&")
                 writeArithmetic(AND);
-            else if (t->GetLexeme() == "|")
+            else if (t->getLexeme() == "|")
                 writeArithmetic(OR);
-            else if (t->GetLexeme() == "~")
+            else if (t->getLexeme() == "~")
                 writeArithmetic(NOT);
             break;
         }
         case Parser::INT_CONST_K:
-            writePush(CONST, atoi(t->GetLexeme().c_str()));
+            writePush(CONST, atoi(t->getLexeme().c_str()));
             break;
         case Parser::NEGATIVE_K:
             writeArithmetic(NEG);
@@ -291,7 +289,7 @@ void CodeGen::writeExpression(Parser::TreeNode *t)
         }
         case Parser::VAR_K:
         {
-            string varName = t->GetLexeme();
+            string varName = t->getLexeme();
             SymbolTable::Info info = symbolTable->subroutineTableFind(varName);
             if (info == SymbolTable::None)
                 info = symbolTable->classesTableFind(currentClassName, varName);
@@ -312,7 +310,7 @@ void CodeGen::writeExpression(Parser::TreeNode *t)
         }
         case Parser::ARRAY_K:
         {
-            string varName = t->GetLexeme();
+            string varName = t->getLexeme();
             SymbolTable::Info info = symbolTable->subroutineTableFind(varName);
             if (info == SymbolTable::None)
                 info = symbolTable->classesTableFind(currentClassName, varName);
@@ -332,7 +330,7 @@ void CodeGen::writeExpression(Parser::TreeNode *t)
         case Parser::BOOL_CONST_K:
         {
             writePush(CONST, 0);
-            if (t->GetLexeme() == "true")
+            if (t->getLexeme() == "true")
                 writeArithmetic(NOT);
             break;
         }
@@ -348,12 +346,12 @@ void CodeGen::writeExpression(Parser::TreeNode *t)
         }
         case Parser::STRING_CONST_K:
         {
-            int stringlength = t->GetLexeme().length();
+            int stringlength = t->getLexeme().length();
             writePush(CONST, stringlength);
             writeCall("String.new", 1);
             for (int i = 0; i < stringlength; i++)
             {
-                writePush(CONST, t->GetLexeme()[i]);
+                writePush(CONST, t->getLexeme()[i]);
                 writeCall("String.appendChar", 2);
             }
             break;

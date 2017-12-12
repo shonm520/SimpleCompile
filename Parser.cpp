@@ -1,3 +1,4 @@
+#include "GramTreeNode.h"
 #include "Parser.h"
 #include <cassert>
 #include <iostream>
@@ -14,19 +15,6 @@ Parser::Parser(vector<string> &filenames)
 
 Scanner::Token Parser::getToken()
 {
-// 	if (tokenBuffer2.size() == 0) {
-// 		auto token = _scanner.nextToken();
-// 		tokenBuffer1.push_back(token);
-// 		if (tokenBuffer1.size() > 10)
-// 			tokenBuffer1.pop_front();
-// 	}
-// 	else {
-// 		auto token = tokenBuffer2.front();
-// 		tokenBuffer1.push_back(token);
-// 		tokenBuffer2.pop_front();
-// 	}
-// 	return tokenBuffer1.back();
-
 	if (_cirQueue.GetItemFromNew())  {
 		auto token = _scanner.nextToken();
 		_cirQueue.Push(token);
@@ -36,11 +24,6 @@ Scanner::Token Parser::getToken()
 
 Scanner::Token Parser::ungetToken()
 {
-// 	assert(tokenBuffer1.size() > 0);
-// 	auto token = tokenBuffer1.back();
-// 	tokenBuffer2.push_front(token);
-// 	tokenBuffer1.pop_back();
-// 	return tokenBuffer1.back();
 	_cirQueue.Back(1);
 	return _cirQueue._member[_cirQueue._index];
 }
@@ -106,19 +89,16 @@ Parser::TreeNode *Parser::parse_class_list()
 
 Parser::TreeNode *Parser::parse_class()
 {
-	TreeNode *t = new TreeNode(CLASS_K);
+	TreeNode *t = new ClassTreeNode();
 	Scanner::Token token = getToken();   //class
-	t->SetNodeKind(CLASS_K);
 	token = getToken();    //class_name Main
 	if (token.kind != Scanner::ID) {
 		syntaxError(_strCurParserFileName, "identifier", token);
 		return t;
 	}
-	//t->child[0] = new TreeNode;
-	//t->child[0]->token = token;
 	auto node = new TreeNode;
-	node->SetToken(token);
-	t->AddChild(node, 0);
+	node->setToken(token);
+	t->addChild(node, 0);
 	if (_strCurParserFileName != token.lexeme) {
 		error1(_strCurParserFileName);
 		return t;
@@ -128,10 +108,8 @@ Parser::TreeNode *Parser::parse_class()
 		syntaxError(_strCurParserFileName, "{", token);
 		return t;
 	}
-	//t->child[1] = parse_class_var_dec_list();
-	//t->child[2] = parse_subroutine_dec_list();
-	t->AddChild(parse_class_var_dec_list(), 1);
-	t->AddChild(parse_subroutine_dec_list(), 2);
+	t->addChild(parse_class_var_dec_list(), 1);
+	t->addChild(parse_subroutine_dec_list(), 2);
 	token = getToken();
 	if (token.lexeme != "}") {
 		syntaxError(_strCurParserFileName, "}", token);
@@ -157,22 +135,17 @@ Parser::TreeNode *Parser::parse_class_var_dec_list()
 Parser::TreeNode *Parser::parse_class_var_dec()
 {
 	TreeNode *t = new TreeNode(CLASS_VAR_DEC_K);
-	t->SetNodeKind(CLASS_VAR_DEC_K);
+	t->setNodeKind(CLASS_VAR_DEC_K);
 	Scanner::Token token = getToken();
 	if (token.lexeme != "static" && token.lexeme != "field") {
 		syntaxError(_strCurParserFileName, "static or filed", token);
 		return t;
 	}
-	//t->child[0] = new TreeNode;
-	//t->child[0]->token.lexeme = token.lexeme;
 	auto node = new TreeNode;
-	//node->token.lexeme = token.lexeme;
-	node->SetLexeme(token.lexeme);
-	t->AddChild(node, 0);
-	//t->child[1] = parse_type();
-	//t->child[2] = parse_var_name_list();
-	t->AddChild(parse_type(), 1);
-	t->AddChild(parse_var_name_list(), 2);
+	node->setLexeme(token.lexeme);
+	t->addChild(node, 0);
+	t->addChild(parse_type(), 1);
+	t->addChild(parse_var_name_list(), 2);
 	token = getToken();
 	if (token.lexeme != ";") {
 		syntaxError(_strCurParserFileName, ";", token);
@@ -189,7 +162,7 @@ Parser::TreeNode *Parser::parse_var_name_list()
 		syntaxError(_strCurParserFileName, "identifier", token);
 		return t;
 	}
-	t->SetToken(token);
+	t->setToken(token);
 	TreeNode *p = t;
 	token = getToken();
 	while (token.lexeme == ",") {
@@ -199,8 +172,8 @@ Parser::TreeNode *Parser::parse_var_name_list()
 			return t;
 		}
 		TreeNode *q = new TreeNode;
-		q->SetToken(token);
-		p->SetNextNode(q);
+		q->setToken(token);
+		p->setNextNode(q);
 		p = q;
 		token = getToken();
 	}
@@ -214,16 +187,15 @@ Parser::TreeNode *Parser::parse_type()
 	Scanner::Token token = getToken();
 	if (token.kind == Scanner::ID) {
 		t = new TreeNode(CLASS_TYPE_K);
-		t->SetNodeKind(CLASS_TYPE_K);
-		//t->token.lexeme = token.lexeme;
-		t->SetLexeme(token.lexeme);
+		t->setNodeKind(CLASS_TYPE_K);
+		t->setLexeme(token.lexeme);
 	}
-	else if (token.lexeme == "int" || token.lexeme == "char"
-		|| token.lexeme == "boolean" || token.lexeme == "void") {
+	else if (token.lexeme == "int" ||
+		     token.lexeme == "char" ||
+			 token.lexeme == "boolean" ||
+			 token.lexeme == "void")  {
 		t = new TreeNode(BASIC_TYPE_K);
-		t->SetNodeKind(BASIC_TYPE_K);
-		//t->token.lexeme = token.lexeme;
-		t->SetLexeme(token.lexeme);
+		t->setLexeme(token.lexeme);
 	}
 	else {
 		syntaxError(_strCurParserFileName, "basic type or class type", token);
@@ -234,68 +206,45 @@ Parser::TreeNode *Parser::parse_type()
 
 Parser::TreeNode *Parser::parse_subroutine_dec_list()
 {
-	/*TreeNode *t = nullptr;
-	TreeNode *p = t;
 	auto token = getToken();
-	while (token.lexeme == "constructor" || token.lexeme == "function" || token.lexeme == "method") {
-		ungetToken();
-		TreeNode *q = parse_subroutin_dec();
-		if (q != nullptr) {
-			if (t == nullptr)
-				t = p = q;
-			else {
-				p->SetNextNode(q);
-				p = q;
-			}
-		}
-		token = getToken();
-	}
-	ungetToken();
-	return t;*/
-
-	
-	auto token = getToken();
-	TreeNodeList tq;
-	while (token.lexeme == "constructor" || token.lexeme == "function" || token.lexeme == "method") {
+	TreeNodeList nodeList;
+	while (token.lexeme == "constructor" ||
+		   token.lexeme == "function" || 
+		   token.lexeme == "method") {
 		ungetToken();
 		TreeNode *q = parse_subroutin_dec();    //解析其中一个函数
 		
-		tq.Push(q);
+		nodeList.Push(q);
 		
 		token = getToken();
 	}
 	ungetToken();
-	return tq.GetHeadNode();
+	return nodeList.GetHeadNode();
 }
 
 Parser::TreeNode *Parser::parse_subroutin_dec()
 {
-	TreeNode *t = new TreeNode(SUBROUTINE_DEC_K);
-	t->SetNodeKind(SUBROUTINE_DEC_K);
+	TreeNode *t = new SubroutineDecNode();
+
 	Scanner::Token token = getToken();
-	if (token.lexeme == "constructor" || token.lexeme == "function" || token.lexeme == "method") {
-		//t->child[0] = new TreeNode;
-		//t->child[0]->SetToken(token);
+	if (token.lexeme == "constructor" ||
+		token.lexeme == "function" ||
+		token.lexeme == "method")  {
 		auto node = new TreeNode();
-		node->SetToken(token);
-		t->AddChild(node, 0);
+		node->setToken(token);
+		t->addChild(node, 0);
 	}
 	else {
 		syntaxError(_strCurParserFileName, "constructor or function or method", token);
 		return t;
 	}
-	//t->child[1] = parse_type();   //函数返回类型
-	t->AddChild(parse_type(), 1);
+	t->addChild(parse_type(), 1);
 	token = getToken();
 	if (token.kind == Scanner::ID) {
-		//t->child[2] = new TreeNode;   //函数名
-		//t->child[2]->SetToken(token);
-		//t->child[2]->token.lexeme = getFullName(token.lexeme);
 		auto node = new TreeNode();
-		node->SetToken(token);
-		//node->token.lexeme = getFullName(token.lexeme);
-		node->SetLexeme(getFullName(token.lexeme));
-		t->AddChild(node, 2);
+		node->setToken(token);
+		node->setLexeme(getFullName(token.lexeme));
+		t->addChild(node, 2);
 	}
 	else {
 		syntaxError(_strCurParserFileName, "identifile", token);
@@ -307,15 +256,13 @@ Parser::TreeNode *Parser::parse_subroutin_dec()
 		syntaxError(_strCurParserFileName, "(", token);
 		return t;
 	}
-	//t->child[3] = parse_params();
-	t->AddChild(parse_params(), 3);
+	t->addChild(parse_params(), 3);
 	token = getToken();
 	if (token.lexeme != ")") {
 		syntaxError(_strCurParserFileName, ")", token);
 		return t;
 	}
-	//t->child[4] = parse_subroutine_body();
-	t->AddChild(parse_subroutine_body(), 4);
+	t->addChild(parse_subroutine_body(), 4);
 	return t;
 }
 
@@ -350,16 +297,13 @@ Parser::TreeNode *Parser::parse_param_list()
 Parser::TreeNode *Parser::parse_param()
 {
 	TreeNode *t = new TreeNode(PARAM_K);
-	t->SetNodeKind(PARAM_K);
-	//t->child[0] = parse_type();
-	t->AddChild(parse_type(), 0);                 //类型
+	t->setNodeKind(PARAM_K);
+	t->addChild(parse_type(), 0);                 //类型
 	Scanner::Token token = getToken();
 	if (token.kind == Scanner::ID) {
-		//t->child[1] = new TreeNode;
-		//t->child[1]->SetToken(token);
 		auto node = new TreeNode;;
-		node->SetToken(token);
-		t->AddChild(node, 1);                    //值
+		node->setToken(token);
+		t->addChild(node, 1);                    //值
 	}
 	else {
 		syntaxError(_strCurParserFileName, "identifier", token);
@@ -373,16 +317,14 @@ Parser::TreeNode *Parser::parse_subroutine_body()
 	_hasRetStatement = false;
 
 	TreeNode *t = new TreeNode(SUBROUTINE_BODY_K);
-	t->SetNodeKind(SUBROUTINE_BODY_K);
+	t->setNodeKind(SUBROUTINE_BODY_K);
 	Scanner::Token token = getToken();
 	if (token.lexeme != "{") {
 		syntaxError(_strCurParserFileName, "{", token);
 		return t;
 	}
-	//t->child[0] = parse_var_dec_list();
-	//t->child[1] = parse_statements();
-	t->AddChild(parse_var_dec_list(), 0);
-	t->AddChild(parse_statements(), 1);
+	t->addChild(parse_var_dec_list(), 0);
+	t->addChild(parse_statements(), 1);
 
 	token = getToken();
 	if (token.lexeme != "}") {
@@ -410,12 +352,6 @@ Loop:
 		ungetToken();
 		TreeNode *q = parse_var_dec();
 		nodeList.Push(q);
-// 		if (t == nullptr)
-// 			t = p = q;
-// 		else {
-// 			p->SetNextNode(q);
-// 			p = q;
-// 		}
 		goto Loop;
 	}
 	else if (token.kind == Scanner::ID) { // 类变量声明
@@ -425,12 +361,6 @@ Loop:
 			ungetToken();
 			TreeNode *q = parse_var_dec();
 			nodeList.Push(q);
-// 			if (t == nullptr)
-// 				t = p = q;
-// 			else {
-// 				p->SetNextNode(q);
-// 				p = q;
-// 			}
 			goto Loop;
 		}
 		ungetToken();
@@ -443,12 +373,12 @@ Loop:
 Parser::TreeNode *Parser::parse_var_dec()
 {
 	TreeNode *t = new TreeNode(VAR_DEC_K);
-	t->SetNodeKind(VAR_DEC_K);
+	t->setNodeKind(VAR_DEC_K);
 	Scanner::Token token;
 	//t->child[0] = parse_type();
 	//t->child[1] = parse_var_name_list();
-	t->AddChild(parse_type(), 0);
-	t->AddChild(parse_var_name_list(), 1);
+	t->addChild(parse_type(), 0);
+	t->addChild(parse_var_name_list(), 1);
 	token = getToken();
 	if (token.lexeme != ";") {
 		syntaxError(_strCurParserFileName, ";", token);
@@ -475,7 +405,7 @@ Parser::TreeNode *Parser::parse_statements()
 				if (t == nullptr)
 					t = p = q;
 				else {
-					p->SetNextNode(q);
+					p->setNextNode(q);
 					p = q;
 				}
 			}
@@ -490,7 +420,7 @@ Parser::TreeNode *Parser::parse_statements()
 			if (t == nullptr)
 				t = p = q;
 			else {
-				p->SetNextNode(q);
+				p->setNextNode(q);
 				p = q;
 			}
 		}
@@ -553,13 +483,10 @@ Parser::TreeNode *Parser::parse_statement()
 
 Parser::TreeNode *Parser::parse_assign_statement()
 {
-	TreeNode *t = new TreeNode(ASSIGN_K);
-	t->SetNodeKind(ASSIGN_K);
-	//t->child[0] = parse_left_value();
-	t->AddChild(parse_left_value(), 0);
+	TreeNode *t = new AssignStatement();
+	t->addChild(parse_left_value(), 0);
 	Scanner::Token token = getToken();
-	//t->child[1] = parse_expression();
-	t->AddChild(parse_expression(), 1);
+	t->addChild(parse_expression(), 1);
 	token = getToken();
 	if (token.lexeme != ";") {
 		syntaxError(_strCurParserFileName, ";", token);
@@ -571,20 +498,20 @@ Parser::TreeNode *Parser::parse_assign_statement()
 Parser::TreeNode *Parser::parse_left_value()
 {
 	TreeNode *t = new TreeNode(VAR_K);
-	t->SetNodeKind(VAR_K);
+	t->setNodeKind(VAR_K);
 	Scanner::Token token = getToken();
-	t->SetToken(token);
+	t->setToken(token);
 	token = getToken();
 	if (token.lexeme == "[") {
-		t->SetNodeKind(ARRAY_K);
+		t->setNodeKind(ARRAY_K);
 		//t->child[0] = parse_expression();
-		t->AddChild(parse_expression(), 0);
+		t->addChild(parse_expression(), 0);
 		token = getToken();
 		if (token.lexeme != "]") {
 			syntaxError(_strCurParserFileName, "]", token);
 			return t;
 		}
-		t->SetNodeKind(ARRAY_K);
+		t->setNodeKind(ARRAY_K);
 	}
 	else if (token.lexeme == "=") {
 		ungetToken();
@@ -595,7 +522,7 @@ Parser::TreeNode *Parser::parse_left_value()
 Parser::TreeNode *Parser::parse_if_statement()
 {
 	TreeNode *t = new TreeNode(IF_STATEMENT_K);
-	t->SetNodeKind(IF_STATEMENT_K);
+	t->setNodeKind(IF_STATEMENT_K);
 	Scanner::Token token = getToken();
 	token = getToken();
 	if (token.lexeme != "(") {
@@ -603,7 +530,7 @@ Parser::TreeNode *Parser::parse_if_statement()
 		return t;
 	}
 	//t->child[0] = parse_expression();
-	t->AddChild(parse_expression(), 0);
+	t->addChild(parse_expression(), 0);
 	token = getToken();
 	if (token.lexeme != ")") {
 		syntaxError(_strCurParserFileName, ")", token);
@@ -615,7 +542,7 @@ Parser::TreeNode *Parser::parse_if_statement()
 		return t;
 	}
 	//t->child[1] = parse_statements();
-	t->AddChild(parse_statements(), 1);
+	t->addChild(parse_statements(), 1);
 	token = getToken();
 	if (token.lexeme != "}") {
 		syntaxError(_strCurParserFileName, "}", token);
@@ -629,7 +556,7 @@ Parser::TreeNode *Parser::parse_if_statement()
 			return t;
 		}
 		//t->child[2] = parse_statements();
-		t->AddChild(parse_statements(), 2);
+		t->addChild(parse_statements(), 2);
 		token = getToken();
 		if (token.lexeme != "}") {
 			syntaxError(_strCurParserFileName, "}", token);
@@ -644,7 +571,7 @@ Parser::TreeNode *Parser::parse_if_statement()
 Parser::TreeNode *Parser::parse_while_statement()
 {
 	TreeNode *t = new TreeNode(WHILE_STATEMENT_K);
-	t->SetNodeKind(WHILE_STATEMENT_K);
+	t->setNodeKind(WHILE_STATEMENT_K);
 	Scanner::Token token = getToken();
 	token = getToken();
 	if (token.lexeme != "(") {
@@ -652,7 +579,7 @@ Parser::TreeNode *Parser::parse_while_statement()
 		return t;
 	}
 	//t->child[0] = parse_expression();
-	t->AddChild(parse_expression(), 0);
+	t->addChild(parse_expression(), 0);
 	token = getToken();
 	if (token.lexeme != ")") {
 		syntaxError(_strCurParserFileName, ")", token);
@@ -664,7 +591,7 @@ Parser::TreeNode *Parser::parse_while_statement()
 		return t;
 	}
 	//t->child[1] = parse_statements();
-	t->AddChild(parse_statements(), 1);
+	t->addChild(parse_statements(), 1);
 	token = getToken();
 	if (token.lexeme != "}") {
 		syntaxError(_strCurParserFileName, "}", token);
@@ -676,16 +603,16 @@ Parser::TreeNode *Parser::parse_while_statement()
 Parser::TreeNode *Parser::parse_return_statement()
 {
 	TreeNode *t = new TreeNode(RETURN_STATEMENT_K);
-	t->SetNodeKind(RETURN_STATEMENT_K);
+	t->setNodeKind(RETURN_STATEMENT_K);
 	Scanner::Token token = getToken();
-	t->SetToken(token);
+	t->setToken(token);
 	token = getToken();
 	if (token.lexeme == ";")
 		return t;
 	else {
 		ungetToken();
 		//t->child[0] = parse_expression();
-		t->AddChild(parse_expression(), 0);
+		t->addChild(parse_expression(), 0);
 		token = getToken();
 		if (token.lexeme != ";") {
 			syntaxError(_strCurParserFileName, ";", token);
@@ -698,15 +625,15 @@ Parser::TreeNode *Parser::parse_return_statement()
 Parser::TreeNode *Parser::parse_call_statement()
 {
 	TreeNode *t = new TreeNode(CALL_STATEMENT_K);
-	t->SetNodeKind(CALL_STATEMENT_K);
+	t->setNodeKind(CALL_STATEMENT_K);
 	Scanner::Token token = getToken();
 	Scanner::Token save = token;
 	//t->child[0] = new TreeNode;
 	auto node = new TreeNode;
-	t->AddChild(node, 0);
+	t->addChild(node, 0);
 	token = getToken();
 	if (token.lexeme == "(") {
-		node->SetNextNode(parse_expressions());
+		node->setNextNode(parse_expressions());
 		token = getToken();
 		if (token.lexeme != ")") {
 			syntaxError(_strCurParserFileName, ")", token);
@@ -725,14 +652,14 @@ Parser::TreeNode *Parser::parse_call_statement()
 			syntaxError(_strCurParserFileName, "(", token);
 			return t;
 		}
-		node->SetNextNode(parse_expressions());
+		node->setNextNode(parse_expressions());
 		token = getToken();
 		if (token.lexeme != ")") {
 			syntaxError(_strCurParserFileName, ")", token);
 			return t;
 		}
 	}
-	t->SetToken(save);
+	t->setToken(save);
 	return t;
 }
 
@@ -758,7 +685,7 @@ Parser::TreeNode *Parser::parse_expression_list()
 	Scanner::Token token = getToken();
 	while (token.lexeme == ",") {
 		TreeNode *q = parse_expression();
-		p->SetNextNode(q);
+		p->setNextNode(q);
 		p = q;
 		token = getToken();
 	}
@@ -772,13 +699,13 @@ Parser::TreeNode *Parser::parse_expression()
 	Scanner::Token token = getToken();
 	while (token.lexeme == "&" || token.lexeme == "|") {
 		TreeNode *p = new TreeNode(BOOL_EXPRESSION_K);
-		p->SetNodeKind(BOOL_EXPRESSION_K);
-		p->SetToken(token);
+		p->setNodeKind(BOOL_EXPRESSION_K);
+		p->setToken(token);
 		//p->child[0] = t;
-		p->AddChild(t, 0);
+		p->addChild(t, 0);
 		t = p;
 		//t->child[1] = parse_bool_expression();
-		t->AddChild(parse_bool_expression(), 1);
+		t->addChild(parse_bool_expression(), 1);
 		token = getToken();
 	}
 	ungetToken();
@@ -792,13 +719,13 @@ Parser::TreeNode *Parser::parse_bool_expression()
 	if (token.lexeme == "<=" || token.lexeme == ">=" || token.lexeme == "=="
 		|| token.lexeme == "<" || token.lexeme == ">" || token.lexeme == "!=") {
 		TreeNode *p = new TreeNode;
-		p->SetNodeKind(COMPARE_K);
-		p->SetToken(token);
+		p->setNodeKind(COMPARE_K);
+		p->setToken(token);
 		//p->child[0] = t;
-		p->AddChild(t, 0);
+		p->addChild(t, 0);
 		t = p;
 		//t->child[1] = parse_additive_expression();
-		t->AddChild(parse_additive_expression(), 1);
+		t->addChild(parse_additive_expression(), 1);
 	}
 	else
 		ungetToken();
@@ -811,13 +738,13 @@ Parser::TreeNode *Parser::parse_additive_expression()
 	Scanner::Token token = getToken();
 	while (token.lexeme == "+" || token.lexeme == "-") {
 		TreeNode *p = new TreeNode(OPERATION_K);
-		p->SetNodeKind(OPERATION_K);
-		p->SetToken(token);
+		p->setNodeKind(OPERATION_K);
+		p->setToken(token);
 		//p->child[0] = t;
-		p->AddChild(t, 0);
+		p->addChild(t, 0);
 		t = p;
 		//p->child[1] = parse_term();
-		p->AddChild(parse_term(), 1);
+		p->addChild(parse_term(), 1);
 		token = getToken();
 	}
 	ungetToken();
@@ -830,13 +757,13 @@ Parser::TreeNode *Parser::parse_term()
 	Scanner::Token token = getToken();
 	while (token.lexeme == "*" || token.lexeme == "/") {
 		TreeNode *p = new TreeNode(OPERATION_K);
-		p->SetNodeKind(OPERATION_K);
-		p->SetToken(token);
+		p->setNodeKind(OPERATION_K);
+		p->setToken(token);
 		//p->child[0] = t;
-		p->AddChild(t, 0);
+		p->addChild(t, 0);
 		t = p;
 		//p->child[1] = parse_factor();
-		p->AddChild(parse_factor(), 1);
+		p->addChild(parse_factor(), 1);
 		token = getToken();
 	}
 	ungetToken();
@@ -849,10 +776,10 @@ Parser::TreeNode *Parser::parse_factor()
 	Scanner::Token token = getToken();
 	if (token.lexeme == "-") {
 		t = new TreeNode(NEGATIVE_K);
-		t->SetNodeKind(NEGATIVE_K);
-		t->SetToken(token);
+		t->setNodeKind(NEGATIVE_K);
+		t->setToken(token);
 		//t->child[0] = parse_positive_factor();
-		t->AddChild(parse_positive_factor(), 0);
+		t->addChild(parse_positive_factor(), 0);
 	}
 	else {
 		ungetToken();
@@ -867,10 +794,10 @@ Parser::TreeNode *Parser::parse_positive_factor()
 	Scanner::Token token = getToken();
 	if (token.lexeme == "~") {
 		t = new TreeNode(BOOL_EXPRESSION_K);
-		t->SetToken(token);
-		t->SetNodeKind(BOOL_EXPRESSION_K);
+		t->setToken(token);
+		t->setNodeKind(BOOL_EXPRESSION_K);
 		//t->child[0] = parse_not_factor();
-		t->AddChild(parse_not_factor(), 0);
+		t->addChild(parse_not_factor(), 0);
 	}
 	else {
 		ungetToken();
@@ -893,49 +820,49 @@ Parser::TreeNode *Parser::parse_not_factor()
 	}
 	else if (token.kind == Scanner::INT) {
 		t = new TreeNode(INT_CONST_K);
-		t->SetToken(token);
-		t->SetNodeKind(INT_CONST_K);
+		t->setToken(token);
+		t->setNodeKind(INT_CONST_K);
 	}
 	else if (token.kind == Scanner::CHAR) {
 		t = new TreeNode(CHAR_CONST_K);
-		t->SetToken(token);
-		t->SetNodeKind(CHAR_CONST_K);
+		t->setToken(token);
+		t->setNodeKind(CHAR_CONST_K);
 	}
 	else if (token.kind == Scanner::STRING) {
 		t = new TreeNode(STRING_CONST_K);
-		t->SetToken(token);
-		t->SetNodeKind(STRING_CONST_K);
+		t->setToken(token);
+		t->setNodeKind(STRING_CONST_K);
 	}
 	else if (token.lexeme == "true" || token.lexeme == "false") {
 		t = new TreeNode(BOOL_CONST_K);
-		t->SetToken(token);
-		t->SetNodeKind(BOOL_CONST_K);
+		t->setToken(token);
+		t->setNodeKind(BOOL_CONST_K);
 	}
 	else if (token.lexeme == "this") {
 		t = new TreeNode(THIS_K);
-		t->SetToken(token);
-		t->SetNodeKind(THIS_K);
+		t->setToken(token);
+		t->setNodeKind(THIS_K);
 	}
 	else if (token.lexeme == "null") {
 		t = new TreeNode(NULL_K);
-		t->SetToken(token);
-		t->SetNodeKind(NULL_K);
+		t->setToken(token);
+		t->setNodeKind(NULL_K);
 	}
 	else if (token.kind == Scanner::ID) {
 		t = new TreeNode(VAR_K);
-		t->SetToken(token);
-		t->SetNodeKind(VAR_K);
+		t->setToken(token);
+		t->setNodeKind(VAR_K);
 		token = getToken();
 		if (token.lexeme == "[") {
 			TreeNode *p = parse_expression();
 			//t->child[0] = p;
-			t->AddChild(p, 0);
+			t->addChild(p, 0);
 			token = getToken();
 			if (token.lexeme != "]") {
 				syntaxError(_strCurParserFileName, "]", token);
 				return t;
 			}
-			t->SetNodeKind(ARRAY_K);
+			t->setNodeKind(ARRAY_K);
 		}
 		else if (token.lexeme == "(" || token.lexeme == ".") {
 			ungetToken();
@@ -951,15 +878,15 @@ Parser::TreeNode *Parser::parse_not_factor()
 Parser::TreeNode *Parser::parse_call_expression()
 {
 	TreeNode *t = new TreeNode(CALL_EXPRESSION_K);
-	t->SetNodeKind(CALL_EXPRESSION_K);
+	t->setNodeKind(CALL_EXPRESSION_K);
 	Scanner::Token token = getToken();
 	Scanner::Token save = token;
 	//t->child[0] = new TreeNode;
 	auto node = new TreeNode;
-	t->AddChild(node, 0);
+	t->addChild(node, 0);
 	token = getToken();
 	if (token.lexeme == "(") {
-		node->SetNextNode(parse_expressions());
+		node->setNextNode(parse_expressions());
 		token = getToken();
 		if (token.lexeme != ")") {
 			syntaxError(_strCurParserFileName, ")", token);
@@ -978,14 +905,14 @@ Parser::TreeNode *Parser::parse_call_expression()
 			syntaxError(_strCurParserFileName, "(", token);
 			return t;
 		}
-		node->SetNextNode(parse_expressions());
+		node->setNextNode(parse_expressions());
 		token = getToken();
 		if (token.lexeme != ")") {
 			syntaxError(_strCurParserFileName, ")", token);
 			return t;
 		}
 	}
-	t->SetToken(save);
+	t->setToken(save);
 	return t;
 }
 
@@ -1001,7 +928,7 @@ void Parser::printSyntaxTree(TreeNode *tree, int dep)
 		for (int i = 0; i < dep; i++)
 			cout << "  ";
 		cout << "| ";
-		switch (tree->GetNodeKind()) {
+		switch (tree->getNodeKind()) {
 		case CLASS_K:
 			cout << "class" ;
 			break;
@@ -1012,10 +939,10 @@ void Parser::printSyntaxTree(TreeNode *tree, int dep)
 			cout << "subroutine_dec" ;
 			break;
 		case BASIC_TYPE_K:
-			cout << "basic_type " << tree->GetLexeme() ;
+			cout << "basic_type " << tree->getLexeme() ;
 			break;
 		case CLASS_TYPE_K:
-			cout << "class_type " << tree->GetLexeme();
+			cout << "class_type " << tree->getLexeme();
 			break;
 		case PARAM_K:
 			cout << "param" ;
@@ -1045,13 +972,13 @@ void Parser::printSyntaxTree(TreeNode *tree, int dep)
 			cout << "call_expression";
 			break;
 		case BOOL_EXPRESSION_K:
-			cout << "bool_expression " << tree->GetLexeme();
+			cout << "bool_expression " << tree->getLexeme();
 			break;
 		case COMPARE_K:
-			cout << "compare " << tree->GetLexeme();
+			cout << "compare " << tree->getLexeme();
 			break;
 		case OPERATION_K:
-			cout << "operation " << tree->GetLexeme();
+			cout << "operation " << tree->getLexeme();
 			break;
 		case BOOL_K:
 			cout << "bool" ;
@@ -1070,9 +997,9 @@ void Parser::printSyntaxTree(TreeNode *tree, int dep)
 		printSyntaxTree(tree->child[4], dep + 2);*/
 
 		for (int i = 0; i < TreeNode::Child_Num_Const; i++)  {
-			printSyntaxTree(tree->GetChildByIndex(i), dep + 2);
+			printSyntaxTree(tree->getChildByIndex(i), dep + 2);
 		}
-		tree = tree->GetNextNode();
+		tree = tree->getNextNode();
 	}
 }
 

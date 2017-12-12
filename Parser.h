@@ -8,8 +8,10 @@
 #include <map>
 #include <queue>
 #include "Error.h"
+#include "GramTreeNode.h"
 
 using namespace std;
+
 
 class Parser
 {
@@ -21,7 +23,7 @@ public:
         COMPARE_K, OPERATION_K, BOOL_K, ASSIGN_K, SUBROUTINE_BODY_K, BOOL_CONST_K, NEGATIVE_K,METHOD_CALL_K,
         INT_CONST_K, CHAR_CONST_K, STRING_CONST_K, KEY_WORD_CONST, THIS_K
     };
-	static string Kind2Des(NodeKind nK)  {
+	/*static string Kind2Des(NodeKind nK)  {
 		static map<NodeKind, string> mapStrDes;
 		if (mapStrDes.size() == 0) {
 			mapStrDes.insert({ CLASS_K, "类类型" });
@@ -41,18 +43,15 @@ public:
 			mapStrDes.insert(make_pair(COMPARE_K, "比较体"));
 			mapStrDes.insert(make_pair(OPERATION_K, "操作符")); 
 			mapStrDes.insert(make_pair(INT_CONST_K, "常整数"));
-	}
-
-
+		}
 		return mapStrDes[nK];
-	}
-    class TreeNode
+	}*/
+    /*class TreeNode
     {
 	public:
 		static const int Child_Num_Const = 5;
 	private:
 		TreeNode *child_[Child_Num_Const];
-		//vector<TreeNode*> _vtTreeNodes;
         TreeNode *next;
         NodeKind nodeKind;
 		string   strNodeDes;
@@ -76,7 +75,6 @@ public:
 		TreeNode(NodeKind nK = None)
         {
 			nodeKind = nK;
-            //child[0] = child[1] = child[2] = child[3] = child[4] = nullptr;
             next = nullptr;
 			strNodeDes = Kind2Des(nK);
 			childIndex = -1;
@@ -98,7 +96,7 @@ public:
 		void SetNodeKind(NodeKind kind)  {
 			nodeKind = kind;
 		}
-		NodeKind GetNodeKind()  {
+		NodeKind getNodeKind()  {
 			return nodeKind;
 		}
 		void SetNextNode(TreeNode* node)  {
@@ -109,7 +107,6 @@ public:
 		}
 		void AddChild(TreeNode* pChild, int ind = -1)  {
 			if (pChild)   {
-				//_vtTreeNodes.push_back(pChild);
 				if (ind >= 0)  {
 					child_[ind] = pChild;
 				}
@@ -118,7 +115,6 @@ public:
 			}
 		}
 		TreeNode* GetChildByIndex(int ind)  {
-			//return _vtTreeNodes[ind];
 			return child_[ind];
 		}
 
@@ -188,7 +184,10 @@ public:
 			return 0;
 		}
 		
-    };
+    };*/
+
+	typedef GramTreeNodeBase TreeNode;
+
 	class TreeNodeList
 	{
 		TreeNode* _head;
@@ -203,7 +202,7 @@ public:
 					_head = _cur = node;
 				}
 				else  {
-					_cur->SetNextNode(node);
+					_cur->setNextNode(node);
 					_cur = node;
 				}
 			}
@@ -250,12 +249,11 @@ private:
     string _strCurParserFileName;
     TreeNode *_pSyntaxTree;
     Scanner _scanner;
-    bool _hasRetStatement;                           // 要保证每个函数都有return语句, 即使返回值为void
+    bool _hasRetStatement;                              // 要保证每个函数都有return语句, 即使返回值为void
 
     Scanner::Token getToken();                          // 从缓冲区中取出一个token
     Scanner::Token ungetToken();                        // 把上一次取出的token放入到缓冲区中
-    deque<Scanner::Token> tokenBuffer1;                 // 左缓冲区
-    deque<Scanner::Token> tokenBuffer2;                 // 右缓冲区
+
 	CirQueue _cirQueue;
     string getFullName(string name);                    // 返回
 

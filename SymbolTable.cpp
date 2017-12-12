@@ -29,28 +29,28 @@ SymbolTable::SymbolTable()
 
 void SymbolTable::classesTableInsert(Parser::TreeNode *t)
 {
-    if (t->GetNodeKind() == Parser::CLASS_K)
+    if (t->getNodeKind() == Parser::CLASS_K)
     {
         map<string, Info> temp;
         _vtClassesTable.push_back(temp);
-        _strCurrentClass = t->GetChildByIndex(0)->GetLexeme();
+        _strCurrentClass = t->getChildByIndex(0)->getLexeme();
         int index = _vtClassesTable.size() - 1;
         _mapClassIndex.insert({_strCurrentClass, index});
         _static_index = _field_index = 0;
     }
-    else if (t->GetNodeKind() == Parser::CLASS_VAR_DEC_K)            // t = CLASS_VAR_DEC_K  
-    {                                                           // t->GetChildByIndex(0) = static | field
-        Info info;                                              // t->GetChildByIndex(1) = type          
-        info.type = t->GetChildByIndex(1)->GetLexeme();                  // t->GetChildByIndex(2) = varName - varName - varName ...
-        for (auto p = t->GetChildByIndex(2); p != nullptr; p = p->GetNextNode())
+    else if (t->getNodeKind() == Parser::CLASS_VAR_DEC_K)            // t = CLASS_VAR_DEC_K  
+    {                                                           // t->getChildByIndex(0) = static | field
+        Info info;                                              // t->getChildByIndex(1) = type          
+        info.type = t->getChildByIndex(1)->getLexeme();                  // t->getChildByIndex(2) = varName - varName - varName ...
+        for (auto p = t->getChildByIndex(2); p != nullptr; p = p->getNextNode())
         {
-            string name = p->GetLexeme();
-            if (t->GetChildByIndex(0)->GetLexeme() == "field")
+            string name = p->getLexeme();
+            if (t->getChildByIndex(0)->getLexeme() == "field")
             {
                 info.kind = FIELD;
                 info.index = _field_index++;
             }
-            else if (t->GetChildByIndex(0)->GetLexeme() == "static")
+            else if (t->getChildByIndex(0)->getLexeme() == "static")
             {
                 info.kind = STATIC;
                 info.index = _static_index++;
@@ -58,76 +58,76 @@ void SymbolTable::classesTableInsert(Parser::TreeNode *t)
 
             if (_vtClassesTable.back().insert({ name, info }).second == false)   // 插入失败,符号表中有已经存在的元素
             {
-                error2(_strCurrentClass, p->GetRow(), info.type, name);
+                error2(_strCurrentClass, p->getRow(), info.type, name);
             }
         }
     }
-    else if (t->GetNodeKind() == Parser::SUBROUTINE_DEC_K)           // t = SUBROUTINE_DEC_K
-    {                                                           // t->GetChildByIndex(0) = function
-        Info info;                                              // t->GetChildByIndex(1) = type
-        if (t->GetChildByIndex(0)->GetLexeme() == "function")            // t->GetChildByIndex(2) = functionName
-            info.kind = FUNCTION;                               // t->GetChildByIndex(3) = arg - arg - arg ...
-        else if (t->GetChildByIndex(0)->GetLexeme() == "method")
+    else if (t->getNodeKind() == Parser::SUBROUTINE_DEC_K)           // t = SUBROUTINE_DEC_K
+    {                                                           // t->getChildByIndex(0) = function
+        Info info;                                              // t->getChildByIndex(1) = type
+        if (t->getChildByIndex(0)->getLexeme() == "function")            // t->getChildByIndex(2) = functionName
+            info.kind = FUNCTION;                               // t->getChildByIndex(3) = arg - arg - arg ...
+        else if (t->getChildByIndex(0)->getLexeme() == "method")
             info.kind = METHOD;
-        else if (t->GetChildByIndex(0)->GetLexeme() == "constructor")
+        else if (t->getChildByIndex(0)->getLexeme() == "constructor")
             info.kind = CONSTRUCTOR;
-        info.type = t->GetChildByIndex(1)->GetLexeme();
-        for (auto p = t->GetChildByIndex(3); p != nullptr; p = p->GetNextNode())
+        info.type = t->getChildByIndex(1)->getLexeme();
+        for (auto p = t->getChildByIndex(3); p != nullptr; p = p->getNextNode())
         {
-            string type = p->GetChildByIndex(0)->GetLexeme();
+            string type = p->getChildByIndex(0)->getLexeme();
             info.args.push_back(type);
         }
-        string name = Parser::getFunctionName(t->GetChildByIndex(2)->GetLexeme());
+        string name = Parser::getFunctionName(t->getChildByIndex(2)->getLexeme());
         if (_vtClassesTable.back().insert({ name, info }).second == false)
         {
-            error3(_strCurrentClass, t->GetChildByIndex(0)->GetRow(), info.type, name);
+            error3(_strCurrentClass, t->getChildByIndex(0)->getRow(), info.type, name);
         }
     }
 }
 
 void SymbolTable::subroutineTableInsert(Parser::TreeNode *t)
 {
-    if (t->GetNodeKind() == Parser::CLASS_K)
-        _strCurrentClass = t->GetChildByIndex(0)->GetLexeme();
-    else if (t->GetNodeKind() == Parser::SUBROUTINE_DEC_K)                               // t = SUBROUTINE_DEC_K
-    {                                                                               // t->GetChildByIndex(0) = function
-        initialSubroutineTable();                                                   // t->GetChildByIndex(1) = type
-        string className = Parser::getCallerName(t->GetChildByIndex(2)->GetLexeme());        // t->GetChildByIndex(2) = functionName
-        string functionName = Parser::getFunctionName(t->GetChildByIndex(2)->GetLexeme());   // t->GetChildByIndex(3) = arg - arg - arg ...
+    if (t->getNodeKind() == Parser::CLASS_K)
+        _strCurrentClass = t->getChildByIndex(0)->getLexeme();
+    else if (t->getNodeKind() == GramTreeNodeBase::SUBROUTINE_DEC_K)                               // t = SUBROUTINE_DEC_K
+    {                                                                               // t->getChildByIndex(0) = function
+        initialSubroutineTable();                                                   // t->getChildByIndex(1) = type
+        string className = Parser::getCallerName(t->getChildByIndex(2)->getLexeme());        // t->getChildByIndex(2) = functionName
+        string functionName = Parser::getFunctionName(t->getChildByIndex(2)->getLexeme());   // t->getChildByIndex(3) = arg - arg - arg ...
         _nCurrentClassNumber = _mapClassIndex.find(className)->second;
         Info info = _vtClassesTable[_nCurrentClassNumber].find(functionName)->second;
         _mapSubroutineTable["this"] = info;
         _var_index = _arg_index = 0;
     }
-    else if (t->GetNodeKind() == Parser::PARAM_K)        // t = PARAM_K
-    {                                               // t->GetChildByIndex(0) = type
-        // 先检查type是否合理                       // t->GetChildByIndex(1) = varName
+    else if (t->getNodeKind() == Parser::PARAM_K)        // t = PARAM_K
+    {                                               // t->getChildByIndex(0) = type
+        // 先检查type是否合理                       // t->getChildByIndex(1) = varName
         Info info;                                  
         info.kind = ARG;
         info.index = _arg_index++;
-        info.type = t->GetChildByIndex(0)->GetLexeme();
+        info.type = t->getChildByIndex(0)->getLexeme();
         if (info.type != "int" && info.type != "char" && 
             info.type != "void" && info.type != "string" && info.type != "boolean")     // 如果不是基本类型
         {
             if (classIndexFind(info.type) == false)     // 也不是类类型
             {
-                error4(_strCurrentClass, t->GetChildByIndex(1)->GetRow(), info.type);
+                error4(_strCurrentClass, t->getChildByIndex(1)->getRow(), info.type);
                 return;
             }
         }
         // 再检查varName是否合理
-        string varName = t->GetChildByIndex(1)->GetLexeme();
+        string varName = t->getChildByIndex(1)->getLexeme();
         if (_mapSubroutineTable.insert({ varName, info }).second == false)
         {
-            error2(_strCurrentClass, t->GetChildByIndex(1)->GetRow(), info.type, varName);
+            error2(_strCurrentClass, t->getChildByIndex(1)->getRow(), info.type, varName);
             return;
         }
     }
-    else if (t->GetNodeKind() == Parser::VAR_DEC_K)          // t = VAR_DEC_K
-    {                                                   // t->GetChildByIndex(0) = type
-        Info info;                                      // t->GetChildByIndex(1) = varName - varName - varName
+    else if (t->getNodeKind() == Parser::VAR_DEC_K)          // t = VAR_DEC_K
+    {                                                   // t->getChildByIndex(0) = type
+        Info info;                                      // t->getChildByIndex(1) = varName - varName - varName
         info.kind = VAR;
-        info.type = t->GetChildByIndex(0)->GetLexeme();
+        info.type = t->getChildByIndex(0)->getLexeme();
         // 先检查type是否合理
         if (info.type != "int" && info.type != "char" &&
             info.type != "void" && info.type != "string" && info.type != "boolean")
@@ -135,18 +135,18 @@ void SymbolTable::subroutineTableInsert(Parser::TreeNode *t)
             if (_mapClassIndex.find(info.type) == _mapClassIndex.end())
             {
                 _errorNum++;
-                error4(_strCurrentClass, t->GetChildByIndex(1)->GetRow(), info.type);
+                error4(_strCurrentClass, t->getChildByIndex(1)->getRow(), info.type);
                 return;
             }
         }
         // 再检查varName是否合理
-        for (auto p = t->GetChildByIndex(1); p != nullptr; p = p->GetNextNode())
+        for (auto p = t->getChildByIndex(1); p != nullptr; p = p->getNextNode())
         {
-            string varName = p->GetLexeme();
+            string varName = p->getLexeme();
             info.index = _var_index++;
             if (_mapSubroutineTable.insert({ varName, info }).second == false)
             {
-                error2(_strCurrentClass, p->GetRow(), info.type, varName);
+                error2(_strCurrentClass, p->getRow(), info.type, varName);
             }
         }
     }

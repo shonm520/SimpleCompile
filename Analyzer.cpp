@@ -15,49 +15,49 @@ void Analyzer::checkExpression(Parser::TreeNode *t)
     if (t != nullptr)
     {
         for (int i = 0; i < 5; i++)
-            checkExpression(t->GetChildByIndex(i));
-        switch (t->GetNodeKind())
+            checkExpression(t->getChildByIndex(i));
+        switch (t->getNodeKind())
         {
-        case Parser::VAR_K:
+        case GramTreeNodeBase::VAR_K:
         {
-            SymbolTable::Info info = _pSymbolTable->subroutineTableFind(t->GetLexeme());
+            SymbolTable::Info info = _pSymbolTable->subroutineTableFind(t->getLexeme());
             if (info == SymbolTable::None)
             {
-                info = _pSymbolTable->classesTableFind(_strCurClassName, t->GetLexeme());
+                info = _pSymbolTable->classesTableFind(_strCurClassName, t->getLexeme());
                 if (info == SymbolTable::None)
                 {
-                    error5(_strCurClassName, t->GetRow(), t->GetLexeme());
+                    error5(_strCurClassName, t->getRow(), t->getLexeme());
                 }
             }
         }
         break;
-        case Parser::ARRAY_K:
+        case GramTreeNodeBase::ARRAY_K:
         {
-            SymbolTable::Info info = _pSymbolTable->subroutineTableFind(t->GetLexeme());
+            SymbolTable::Info info = _pSymbolTable->subroutineTableFind(t->getLexeme());
             if (info == SymbolTable::None)
             {
-                info = _pSymbolTable->classesTableFind(_strCurClassName, t->GetLexeme());
+                info = _pSymbolTable->classesTableFind(_strCurClassName, t->getLexeme());
                 if (info == SymbolTable::None)
                 {
-                    error5(_strCurClassName, t->GetRow(), t->GetLexeme());
+                    error5(_strCurClassName, t->getRow(), t->getLexeme());
                 }
             }
             if (info.type != "Array")
             {
-                error6(_strCurClassName, t->GetRow(), t->GetLexeme());
+                error6(_strCurClassName, t->getRow(), t->getLexeme());
             }
         }
         break;
-        case Parser::CALL_EXPRESSION_K:
-        case Parser::CALL_STATEMENT_K:
+        case GramTreeNodeBase::CALL_EXPRESSION_K:
+        case GramTreeNodeBase::CALL_STATEMENT_K:
         {
-            if (t->GetLexeme().find('.') == string::npos)     // call_statement -> ID ( expressions ) 
+            if (t->getLexeme().find('.') == string::npos)     // call_statement -> ID ( expressions ) 
             {
                 // 先检查函数有没有在当前类中声明
-                string functionName = t->GetLexeme();
+                string functionName = t->getLexeme();
                 if (_pSymbolTable->classesTableFind(_strCurClassName, functionName) == SymbolTable::None)
                 {
-                    error7(_strCurClassName, _strCurClassName, t->GetRow(), functionName);
+                    error7(_strCurClassName, _strCurClassName, t->getRow(), functionName);
                     break;
                 }
                 SymbolTable::Kind currentFunctionKind = _pSymbolTable->classesTableFind(_strCurClassName, _strCurFunctionName).kind;
@@ -65,39 +65,39 @@ void Analyzer::checkExpression(Parser::TreeNode *t)
                 // 再检查当前子过程和被调用过程是否都是method
                 if (currentFunctionKind == SymbolTable::FUNCTION && calledFunctionKind == SymbolTable::FUNCTION)
                 {
-                    error8(_strCurClassName, t->GetRow(), functionName);
+                    error8(_strCurClassName, t->getRow(), functionName);
                     break;
                 }
                 // 再检查函数的参数是否正确
                 SymbolTable::Info info = _pSymbolTable->classesTableFind(_strCurClassName, functionName);
                 checkArguments(t, info.args, functionName);
-                t->GetChildByIndex(0)->SetNodeKind(Parser::METHOD_CALL_K);
+				t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::METHOD_CALL_K);
             }
             else                                            // call_statement -> ID . ID ( expressions ) 
             {
                 // 先检查caller
-                string callerName = Parser::getCallerName(t->GetLexeme());
-                string functionName = Parser::getFunctionName(t->GetLexeme());
+                string callerName = Parser::getCallerName(t->getLexeme());
+                string functionName = Parser::getFunctionName(t->getLexeme());
                 if (_pSymbolTable->classIndexFind(callerName) == true)    // 如果caller是类
                 {
                     // 再检查function
                     SymbolTable::Info info = _pSymbolTable->classesTableFind(callerName, functionName);
                     if (info == SymbolTable::None)
                     {
-                        error7(_strCurClassName, callerName, t->GetRow(), functionName);
+                        error7(_strCurClassName, callerName, t->getRow(), functionName);
                         break;
                     }
                     if (info.kind == SymbolTable::METHOD)
                     {
-                        error9(_strCurClassName, callerName, t->GetRow(), functionName);
+                        error9(_strCurClassName, callerName, t->getRow(), functionName);
                         break;
                     }
                     // 再检查参数
                     checkArguments(t, info.args, functionName);
                     if (info.kind == SymbolTable::FUNCTION)
-                        t->GetChildByIndex(0)->SetNodeKind(Parser::FUNCTION_CALL_K);
+                        t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::FUNCTION_CALL_K);
                     else if (info.kind == SymbolTable::CONSTRUCTOR)
-                        t->GetChildByIndex(0)->SetNodeKind(Parser::CONSTRUCTOR_CALL_K);
+						t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::CONSTRUCTOR_CALL_K);
                 }
                 else                                                   // 如果调用者是对象
                 {
@@ -108,7 +108,7 @@ void Analyzer::checkExpression(Parser::TreeNode *t)
                         objInfo = _pSymbolTable->classesTableFind(_strCurClassName, callerName);
                         if (objInfo == SymbolTable::None)
                         {
-                            error5(_strCurClassName, t->GetRow(), callerName);
+                            error5(_strCurClassName, t->getRow(), callerName);
                             break;
                         }
                     }
@@ -116,17 +116,17 @@ void Analyzer::checkExpression(Parser::TreeNode *t)
                     SymbolTable::Info functionInfo = _pSymbolTable->classesTableFind(objInfo.type, functionName);
                     if (functionInfo == SymbolTable::None)
                     {
-                        error7(_strCurClassName, callerName, t->GetRow(), functionName);
+                        error7(_strCurClassName, callerName, t->getRow(), functionName);
                         break;
                     }
                     if (functionInfo.kind != SymbolTable::METHOD)
                     {
-                        error10(_strCurClassName, callerName, t->GetRow(), functionName);
+                        error10(_strCurClassName, callerName, t->getRow(), functionName);
                         break;
                     }
                     // 再检查参数
                     checkArguments(t, functionInfo.args, functionName);
-                    t->GetChildByIndex(0)->SetNodeKind(Parser::METHOD_CALL_K);
+					t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::METHOD_CALL_K);
 //                    t->token.lexeme = objInfo.type + "." + functionName;
                 }
             }
@@ -141,44 +141,44 @@ void Analyzer::checkExpression(Parser::TreeNode *t)
 */
 void Analyzer::checkStatement(Parser::TreeNode *t)
 {
-    switch (t->GetNodeKind())
+    switch (t->getNodeKind())
     {
-    case Parser::CLASS_K:
-        _strCurClassName = t->GetChildByIndex(0)->GetLexeme();
+    case GramTreeNodeBase::CLASS_K:
+        _strCurClassName = t->getChildByIndex(0)->getLexeme();
         break;
-    case Parser::ASSIGN_K:
+    case GramTreeNodeBase::ASSIGN_K:
     {
-        checkExpression(t->GetChildByIndex(0));
-        checkExpression(t->GetChildByIndex(1));
+        checkExpression(t->getChildByIndex(0));
+        checkExpression(t->getChildByIndex(1));
     }
-    case Parser::IF_STATEMENT_K:
-    case Parser::WHILE_STATEMENT_K:
+    case GramTreeNodeBase::IF_STATEMENT_K:
+    case GramTreeNodeBase::WHILE_STATEMENT_K:
     {
-        checkExpression(t->GetChildByIndex(0));
+        checkExpression(t->getChildByIndex(0));
         break;
     }
-    case Parser::RETURN_STATEMENT_K:
+    case GramTreeNodeBase::RETURN_STATEMENT_K:
     {
-        checkExpression(t->GetChildByIndex(0));
+        checkExpression(t->getChildByIndex(0));
         SymbolTable::Info info = _pSymbolTable->subroutineTableFind("this");
-        if (t->GetChildByIndex(0) == nullptr && info.type != "void")
+        if (t->getChildByIndex(0) == nullptr && info.type != "void")
         {
-            error11(_strCurClassName, info.type, t->GetRow());
+            error11(_strCurClassName, info.type, t->getRow());
             break;
         }
-        else if (t->GetChildByIndex(0) != nullptr && info.type == "void")
+        else if (t->getChildByIndex(0) != nullptr && info.type == "void")
         {
-            error12(_strCurClassName, t->GetRow());
+            error12(_strCurClassName, t->getRow());
             break;
         }
-        if (info.kind == SymbolTable::CONSTRUCTOR && t->GetChildByIndex(0)->GetLexeme() != "this")
+        if (info.kind == SymbolTable::CONSTRUCTOR && t->getChildByIndex(0)->getLexeme() != "this")
         {
-            error13(_strCurClassName, t->GetRow());
+            error13(_strCurClassName, t->getRow());
             break;
         }
         break;
     }
-    case Parser::CALL_STATEMENT_K:
+    case GramTreeNodeBase::CALL_STATEMENT_K:
         checkExpression(t);
         break;
     }
@@ -187,19 +187,19 @@ void Analyzer::checkStatement(Parser::TreeNode *t)
 void Analyzer::checkArguments(Parser::TreeNode *t, vector<string> parameter, string functionName)
 {
     int argumentSize = 0;
-    for (auto p = t->GetChildByIndex(0)->GetNextNode(); p != nullptr; p = p->GetNextNode())
+    for (auto p = t->getChildByIndex(0)->getNextNode(); p != nullptr; p = p->getNextNode())
     {
         checkExpression(p);
         argumentSize++;
     }
     if (argumentSize < parameter.size())
     {
-        error14(_strCurClassName, functionName, t->GetRow());
+        error14(_strCurClassName, functionName, t->getRow());
         return;
     }
     else if (argumentSize > parameter.size())
     {
-        error15(_strCurClassName, functionName, t->GetRow());
+        error15(_strCurClassName, functionName, t->getRow());
         return;
     }
 }
@@ -253,10 +253,10 @@ void Analyzer::buildClassesTable(Parser::TreeNode *t)
         for (int i = 0; i < 5; i++)
         {
             depth++;
-            buildClassesTable(t->GetChildByIndex(i));
+            buildClassesTable(t->getChildByIndex(i));
             depth--;
         }
-        t = t->GetNextNode();
+        t = t->getNextNode();
     }
 }
 
@@ -267,7 +267,7 @@ void Analyzer::checkStatements(Parser::TreeNode *t)
         _pSymbolTable->subroutineTableInsert(t);
         checkStatement(t);
         for (int i = 0; i < 5; i++)
-            checkStatements(t->GetChildByIndex(i));
-        t = t->GetNextNode();
+            checkStatements(t->getChildByIndex(i));
+        t = t->getNextNode();
     }
 }
