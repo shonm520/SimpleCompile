@@ -56,6 +56,14 @@ string Parser::getFunctionName(string fullName)
 	return string(++iter, fullName.cend());
 }
 
+bool Parser::isBasicType(string type)
+{
+	if (type == "int" || type == "char" || type == "boolean" || type == "string")  {
+		return true;
+	}
+	return false;
+}
+
 void Parser::parse_program()
 {
 	_pSyntaxTree = parse_class_list();
@@ -84,7 +92,7 @@ Parser::TreeNode *Parser::parse_class_list()
 		nodeList.Push(q);
 		_scanner.closeFile();
 	}
-	return nodeList.GetHeadNode();
+	return nodeList.getHeadNode();
 }
 
 Parser::TreeNode *Parser::parse_class()
@@ -129,7 +137,7 @@ Parser::TreeNode *Parser::parse_class_var_dec_list()
 		token = getToken();
 	}
 	ungetToken();
-	return nodeList.GetHeadNode();
+	return nodeList.getHeadNode();
 }
 
 Parser::TreeNode *Parser::parse_class_var_dec()
@@ -219,7 +227,7 @@ Parser::TreeNode *Parser::parse_subroutine_dec_list()
 		token = getToken();
 	}
 	ungetToken();
-	return nodeList.GetHeadNode();
+	return nodeList.getHeadNode();
 }
 
 Parser::TreeNode *Parser::parse_subroutin_dec()
@@ -291,7 +299,7 @@ Parser::TreeNode *Parser::parse_param_list()
 		token = getToken();
 	}
 	ungetToken();
-	return nodeList.GetHeadNode();
+	return nodeList.getHeadNode();
 }
 
 Parser::TreeNode *Parser::parse_param()
@@ -330,7 +338,7 @@ Parser::TreeNode *Parser::parse_subroutine_body()
 		syntaxError(_strCurParserFileName, "}", token);
 		return t;
 	}
-	if (_hasRetStatement == false) {
+	if (/*_hasRetStatement == false*/false) {
 		syntaxError(_strCurParserFileName, "return statement", token);
 		return t;
 	}
@@ -339,15 +347,10 @@ Parser::TreeNode *Parser::parse_subroutine_body()
 
 Parser::TreeNode *Parser::parse_var_dec_list()
 {
-	TreeNode *t = nullptr;
-	TreeNode *p = t;
-
 	TreeNodeList nodeList;
-
 Loop:
 	Scanner::Token token = getToken();
-	if (token.lexeme == "int" || token.lexeme == "char"
-		|| token.lexeme == "boolean" || token.lexeme == "string") {
+	if (isBasicType(token.lexeme))  {
 		ungetToken();
 		TreeNode *q = parse_var_dec();
 		nodeList.Push(q);
@@ -365,8 +368,7 @@ Loop:
 		ungetToken();
 	}
 	ungetToken();
-	//return t;
-	return nodeList.GetHeadNode();
+	return nodeList.getHeadNode();
 }
 
 Parser::TreeNode *Parser::parse_var_dec()
@@ -376,7 +378,13 @@ Parser::TreeNode *Parser::parse_var_dec()
 	t->addChild(parse_type(), VarDecNode::VarDec_Type);
 	t->addChild(parse_var_name_list(), VarDecNode::VarDec_Name);
 	token = getToken();
-	if (token.lexeme != ";") {
+	if (token.lexeme == "=")  {
+		ungetToken();
+		ungetToken();
+		TreeNode* node = parse_assign_statement();
+		t->setNextNode(node);
+	}
+	else if (token.lexeme != ";") {
 		syntaxError(_strCurParserFileName, ";", token);
 		return t;
 	}
@@ -385,46 +393,47 @@ Parser::TreeNode *Parser::parse_var_dec()
 
 Parser::TreeNode *Parser::parse_statements()
 {
-	TreeNode *t = nullptr;
-	TreeNode *p = t;
+	TreeNodeList nodeList;
 	Scanner::Token token = getToken();
-	while (token.lexeme == "if" || token.lexeme == "while" || token.lexeme == "return"
-		|| token.kind == Scanner::ID) {
+	bool isVarDec = true;
+	while (token.lexeme == "if" || token.lexeme == "while" || token.lexeme == "return" || token.kind == Scanner::ID || 
+		   isBasicType(token.lexeme)) {
 		if (token.lexeme == "return")
 			_hasRetStatement = true;
-		if (token.kind == Scanner::ID) {
+		if (isVarDec && (isBasicType(token.lexeme) || token.kind == Scanner::ID))  {   //变量声明int a = 2;或者类声明String s
+			ungetToken();
+			TreeNode* q = parse_var_dec_list();
+			if (q)  {
+				nodeList.Push(q);
+			}
+			else  {
+				isVarDec = false;
+			}
+		}
+		else if (token.kind == Scanner::ID) {
 			token = getToken();
 			if (token.lexeme == "=" || token.lexeme == "[" || token.lexeme == "(" || token.lexeme == ".") {
 				ungetToken();
 				ungetToken();
 				TreeNode *q = parse_statement();
-				if (t == nullptr)
-					t = p = q;
-				else {
-					p->setNextNode(q);
-					p = q;
-				}
+				nodeList.Push(q);
 			}
 			else {
 				ungetToken();
 				break;
 			}
+			isVarDec = true;
 		}
 		else {
 			ungetToken();
 			TreeNode *q = parse_statement();
-			if (t == nullptr)
-				t = p = q;
-			else {
-				p->setNextNode(q);
-				p = q;
-			}
+			nodeList.Push(q);
+			isVarDec = true;
 		}
 		token = getToken();
 	}
 	ungetToken();
-
-	return t;
+	return nodeList.getHeadNode();
 }
 
 Parser::TreeNode *Parser::parse_statement()

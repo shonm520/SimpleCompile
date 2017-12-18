@@ -63,5 +63,6 @@ void error19();
 
 void error20();
 
+void error21(string currentClassName, string callerName, int row, string functionName);
 
 #endif

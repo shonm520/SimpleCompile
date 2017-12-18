@@ -20,19 +20,17 @@ string GramTreeNodeBase::getClassName()       //获得类名
 {
 	if (_strClassName == "")  {  //为了缓存,提高效率
 		if (_nodeKind == CLASS_K)  {
-			return ((ClassTreeNode*)this)->getClassName();
+			_strClassName = ((ClassTreeNode*)this)->getClassName();
 		}
 		else  {
 			auto p = getParentNode();
 			while (p->getNodeKind() != CLASS_K)  {    //向上找到最终的类名
 				p = p->getParentNode();
 			}
-			return ((ClassTreeNode*)p)->getClassName();
+			_strClassName = ((ClassTreeNode*)p)->getClassName();
 		}
 	}
-	else  {
-		return _strClassName;
-	}
+	return _strClassName;
 }
 
 

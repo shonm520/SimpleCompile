@@ -223,7 +223,11 @@ void CodeGen::translateCall(Parser::TreeNode *t)
 	if (t->getChildByIndex(0)->getNodeKind() == Parser::METHOD_CALL_K)  {
 		nArgs++;
 	}
-    writeCall(t->getLexeme(), nArgs);
+	string strFullCallName = t->getLexeme();
+	if (strFullCallName.find('.') == string::npos)  {
+		strFullCallName = currentClassName + "." + t->getLexeme();
+	}
+	writeCall(strFullCallName, nArgs);
 }
 
 // ºóÐò±éÀú

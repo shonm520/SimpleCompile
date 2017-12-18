@@ -53,12 +53,52 @@ void Analyzer::checkExpression(Parser::TreeNode *t)
         case GramTreeNodeBase::CALL_EXPRESSION_K:
         case GramTreeNodeBase::CALL_STATEMENT_K:
         {
-            if (t->getLexeme().find('.') == string::npos)     // call_statement -> ID ( expressions ) 
+			string functionName = t->getLexeme();    // 先检查函数有没有在当前类中声明
+			string strClassName = t->getClassName();
+			string strCallerName;                    //可能是类名也可能是类变量名
+			size_t indexOfDot = functionName.find('.');
+			if (indexOfDot != string::npos)  {       //如果有点号调用则分离出类名(类变量)和函数名
+				strCallerName = functionName.substr(0, indexOfDot);
+				functionName = functionName.substr(indexOfDot + 1, functionName.size() - 1);
+			}
+			if (strCallerName == "")  {
+				strCallerName = strClassName;
+			}
+			if (!_pSymbolTable->isClassType(strCallerName))  {    //类名不存在,也有可能是类变量名
+				SymbolTable::Info objInfo = _pSymbolTable->findInSubroutineTable(strCallerName);   
+				if (objInfo == SymbolTable::None)  {              //不在函数局部变量中
+					objInfo = _pSymbolTable->findClassesTable(strClassName, strCallerName);   
+					if (objInfo == SymbolTable::None)  {          //也不是类的静态成员
+						error5(strClassName, t->getRow(), strCallerName);
+						break;
+					}
+				}
+				strCallerName = objInfo.type;
+			}
+			SymbolTable::Info info = _pSymbolTable->findClassesTable(strCallerName, functionName);
+			if (info == SymbolTable::None)  {
+				error21(strClassName, strCallerName, t->getRow(), functionName);   //没有该方法或函数
+				break;
+			}
+			checkArguments(t, info.args, functionName);  //检查参数是否一致
+
+			if (info.kind == SymbolTable::CONSTRUCTOR)  {
+				t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::CONSTRUCTOR_CALL_K);
+			}
+			else if (info.kind == SymbolTable::METHOD)  {
+				t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::METHOD_CALL_K);
+			}
+			else if (info.kind == SymbolTable::FUNCTION)  {       //是静态函数
+				t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::FUNCTION_CALL_K);
+			}
+			break;
+
+            /*if (t->getLexeme().find('.') == string::npos)     // 这里要支持静态函数不用点调用
             {
                 string functionName = t->getLexeme();    // 先检查函数有没有在当前类中声明
 				if (_pSymbolTable->findClassesTable(strClassName, functionName) == SymbolTable::None)
                 {
-					error7(strClassName, strClassName, t->getRow(), functionName);
+					error7(strClassName, strClassName, t->getRow(), functionName);   //没有该方法
                     break;
                 }
 				SymbolTable::Kind currentFunctionKind = _pSymbolTable->findClassesTable(strClassName, _strCurFunctionName).kind;
@@ -66,7 +106,7 @@ void Analyzer::checkExpression(Parser::TreeNode *t)
                 
                 if (currentFunctionKind == SymbolTable::FUNCTION && calledFunctionKind == SymbolTable::FUNCTION)   // 再检查当前子过程和被调用过程是否都是method
                 {
-                    error8(strClassName, t->getRow(), functionName);
+                    error8(strClassName, t->getRow(), functionName);  //把方法作为函数调用
                     break;
                 }
                 SymbolTable::Info info = _pSymbolTable->findClassesTable(strClassName, functionName);         // 再检查函数的参数是否正确
@@ -121,10 +161,9 @@ void Analyzer::checkExpression(Parser::TreeNode *t)
                     }
                     checkArguments(t, functionInfo.args, functionName);   // 再检查参数
 					t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::METHOD_CALL_K);
-//                    t->token.lexeme = objInfo.type + "." + functionName;
                 }
             }
-            break;
+            break;*/
         }
         }
     }
@@ -180,7 +219,7 @@ void Analyzer::checkStatement(Parser::TreeNode *t)
     }
 }
 
-void Analyzer::checkArguments(Parser::TreeNode *t, vector<string> parameter, string functionName)
+void Analyzer::checkArguments(Parser::TreeNode *t, vector<string> parameter, string functionName)  //parameter为函数声明时的参数个数
 {
     int argumentSize = 0;
     for (auto p = t->getChildByIndex(0)->getNextNode(); p != nullptr; p = p->getNextNode())

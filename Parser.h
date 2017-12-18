@@ -199,16 +199,41 @@ public:
 		void Push(TreeNode* node)  {
 			if (node != nullptr)  {
 				if (_head == nullptr)  {
-					_head = _cur = node;
+					TreeNode* curNode = getCurNode(node);
+					if (curNode != node)  {  //要加入的节点是个链节点则要拆散一个一个的加
+						_head = node;
+						_cur = curNode;
+					}
+					else  {
+						_head = _cur = node;
+					}
 				}
 				else  {
-					_cur->setNextNode(node);
-					_cur = node;
+					TreeNode* curNode = getCurNode(node);  //节点的当前节点,即最后一个节点
+					if (curNode != node)  {                //要加入的节点是个链节点则要拆散一个一个的加
+						_cur->setNextNode(node);
+						_cur = curNode;
+					}
+					else  {
+						_cur->setNextNode(node);
+						_cur = node;
+					}
 				}
 			}
 		}
-		TreeNode* GetHeadNode()  {
+		TreeNode* getHeadNode()  {
 			return _head;
+		}
+		TreeNode* getCurNode()  {
+			return _cur;
+		}
+		static TreeNode* getCurNode(TreeNode* node)  {
+			TreeNode* curNode = nullptr;
+			while (node)  {
+				curNode = node;
+				node = node->getNextNode();
+			}
+			return curNode;
 		}
 	}; 
 
@@ -299,6 +324,7 @@ public:
     void parse_program();
     static string getCallerName(string fullName);
     static string getFunctionName(string fullName);
+	static bool isBasicType(string);    //是否是基本类型
 };
 
 #endif

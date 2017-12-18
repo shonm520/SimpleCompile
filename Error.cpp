@@ -162,3 +162,10 @@ void error20()
     errorNum++;
     cerr << "Error in class Main: the argument size of subroutine main must be null" << endl;
 }
+
+void error21(string currentClassName, string callerName, int row, string functionName)
+{
+	errorNum++;
+	cerr << "Error in class " << currentClassName << " in line " << row
+		<<", function(or method) "<< "\'" << functionName << "\' " << "is not defined" << endl;
+}
