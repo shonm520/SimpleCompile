@@ -48,14 +48,16 @@ private:
     void initialSubroutineTable();          // 销毁函数符号表
     SymbolTable();
     static SymbolTable * instance;      // 指向符号表单实例对象
+
+	bool isBaseType(string type);
 public:
     static SymbolTable * getInstance();     // 返回符号表单实例对象
-    void classesTableInsert(Parser::TreeNode *t);       // 类符号表的插入操作
-    void subroutineTableInsert(Parser::TreeNode *t);    // 函数符号表的插入操作
+    void insertClassesTable(Parser::TreeNode *t);       // 类符号表的插入操作
+    void insertSubroutineTable(Parser::TreeNode *t);    // 函数符号表的插入操作
     
-    Info subroutineTableFind(string name);  // 函数符号表的查找操作
-    Info classesTableFind(string className, string functionName);   // 类符号表的查找操作
-    bool classIndexFind(string className);  // 判断className是不是合法的类名
+    Info findInSubroutineTable(string name);  // 函数符号表的查找操作
+    Info findClassesTable(string className, string functionName);   // 类符号表的查找操作
+    bool isClassType(string className);  // 判断className是不是合法的类名
     
     int getFieldNumber(string className);
     void printClassesTable();       // 测试程序, 打印类符号表

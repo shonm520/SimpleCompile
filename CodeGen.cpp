@@ -19,7 +19,7 @@ void CodeGen::write(Parser::TreeNode *t)
         return;
     while (t != nullptr)
     {
-        symbolTable->subroutineTableInsert(t);
+        symbolTable->insertSubroutineTable(t);
         translate(t);
         for (int i = 0; i < 5; i++)
         {
@@ -77,9 +77,9 @@ void CodeGen::translate(Parser::TreeNode *t)
         {
 			writeExpression(t->getChildByTag("var_rval"));
 			string varName = pVarNode->getLexeme();
-            SymbolTable::Info info = symbolTable->subroutineTableFind(varName);
+            SymbolTable::Info info = symbolTable->findInSubroutineTable(varName);
             if (info == SymbolTable::None)
-                info = symbolTable->classesTableFind(currentClassName, varName);
+                info = symbolTable->findClassesTable(currentClassName, varName);
             if (info.kind == SymbolTable::FIELD)
                 writePop(THIS, info.index);
             else if (info.kind == SymbolTable::STATIC)
@@ -98,9 +98,9 @@ void CodeGen::translate(Parser::TreeNode *t)
         {
 			writeExpression(pVarNode->getChildByIndex(0));
 			string varName = pVarNode->getLexeme();
-            SymbolTable::Info info = symbolTable->subroutineTableFind(varName);
+            SymbolTable::Info info = symbolTable->findInSubroutineTable(varName);
             if (info == SymbolTable::None)
-                info = symbolTable->classesTableFind(currentClassName, varName);
+                info = symbolTable->findClassesTable(currentClassName, varName);
             if (info.kind == SymbolTable::FIELD)
                 writePush(THIS, info.index);
             else if (info.kind == SymbolTable::STATIC)
@@ -199,9 +199,9 @@ void CodeGen::translateCall(Parser::TreeNode *t)
         else                         // obj.method()µ÷ÓÃ
         {
             string objName = Parser::getCallerName(t->getLexeme());
-            SymbolTable::Info info = symbolTable->subroutineTableFind(objName);
+            SymbolTable::Info info = symbolTable->findInSubroutineTable(objName);
             if (info == SymbolTable::None)
-                info = symbolTable->classesTableFind(currentClassName, objName);
+                info = symbolTable->findClassesTable(currentClassName, objName);
             if (info.kind == SymbolTable::FIELD)
                 writePush(THIS, info.index);
             else if (info.kind == SymbolTable::VAR)
@@ -220,8 +220,9 @@ void CodeGen::translateCall(Parser::TreeNode *t)
         writeExpression(p);
         nArgs++;
     }
-    if (t->getChildByIndex(0)->getNodeKind() == Parser::METHOD_CALL_K)
-        nArgs++;
+	if (t->getChildByIndex(0)->getNodeKind() == Parser::METHOD_CALL_K)  {
+		nArgs++;
+	}
     writeCall(t->getLexeme(), nArgs);
 }
 
@@ -290,9 +291,9 @@ void CodeGen::writeExpression(Parser::TreeNode *t)
         case Parser::VAR_K:
         {
             string varName = t->getLexeme();
-            SymbolTable::Info info = symbolTable->subroutineTableFind(varName);
+            SymbolTable::Info info = symbolTable->findInSubroutineTable(varName);
             if (info == SymbolTable::None)
-                info = symbolTable->classesTableFind(currentClassName, varName);
+                info = symbolTable->findClassesTable(currentClassName, varName);
             if (info.kind == SymbolTable::FIELD)
                 writePush(THIS, info.index);
             else if (info.kind == SymbolTable::STATIC)
@@ -311,9 +312,9 @@ void CodeGen::writeExpression(Parser::TreeNode *t)
         case Parser::ARRAY_K:
         {
             string varName = t->getLexeme();
-            SymbolTable::Info info = symbolTable->subroutineTableFind(varName);
+            SymbolTable::Info info = symbolTable->findInSubroutineTable(varName);
             if (info == SymbolTable::None)
-                info = symbolTable->classesTableFind(currentClassName, varName);
+                info = symbolTable->findClassesTable(currentClassName, varName);
             if (info.kind == SymbolTable::FIELD)
                 writePush(THIS, info.index);
             else if (info.kind == SymbolTable::STATIC)

@@ -73,20 +73,24 @@ public:
 		_pNext = nullptr;
 		_nodeKind = (NodeKind)nK;
 		_strNodeDes = Kind2Des(nK);
+		_strClassName = "";
 		_childIndex = -1;
+		_siblings = 0;
 		_pParent = nullptr;
-		memset(&child_, 0, sizeof(GramTreeNodeBase*)* Child_Num_Const);
+		memset(&_child, 0, sizeof(GramTreeNodeBase*)* Child_Num_Const);
 	}
 	~GramTreeNodeBase(){}
 
 protected:
-	GramTreeNodeBase* child_[Child_Num_Const];
+	GramTreeNodeBase* _child[Child_Num_Const];
 	GramTreeNodeBase* _pParent;
 	GramTreeNodeBase* _pNext;
 	NodeKind _nodeKind;
 	string   _strNodeDes;
-	int    _childIndex;     //子类的索引
-
+	string   _strClassName;
+	short    _childIndex;     //子类的索引
+	short    _siblings;       //同等节点的个数
+	  
 	Scanner::Token token_;
 
 public:
@@ -109,17 +113,28 @@ public:
 		return _nodeKind;
 	}
 	void setNextNode(GramTreeNodeBase* node)  {
+		if (node)  {
+			node->_childIndex = _childIndex;   //这么理解,父亲有多个老婆,每个老婆有0到多个儿子,生母是同一个的孩子编号一样
+		}
 		_pNext = node;
+	}
+	short getSiblings()  {
+		return _siblings;
 	}
 	GramTreeNodeBase* getNextNode()  {
 		return _pNext;
 	}
+	GramTreeNodeBase* getParentNode()  {
+		return _pParent;
+	}
 
 	void addChild(GramTreeNodeBase* pChild, int ind = -1);
 
+	string getClassName();
+
 	GramTreeNodeBase* getChildByIndex(int ind)  {
 		if (ind >= 0 && ind < Child_Num_Const)  {
-			return child_[ind];
+			return _child[ind];
 		}
 		return nullptr;
 	}
@@ -134,20 +149,32 @@ public:
 
 
 
-class ClassTreeNode : public GramTreeNodeBase  {
+class ClassTreeNode : public GramTreeNodeBase  {   //类类型节点,所有类型的最终parent指向该类
 public:
 	ClassTreeNode(int nK = None) : GramTreeNodeBase(nK)  {
 		_nodeKind = CLASS_K;
 	}
 	virtual ~ClassTreeNode(){}
 
+	enum ClassFiled  {
+		Class_Name = 0,
+		Class_VarDec,
+		Class_SubroutineDec
+	}; 
+
 	virtual string getName() override;
+	string getClassName()  {
+		return getName();
+	}
+
+private:
+	string _strClassName;
 };
 
 
 class SubroutineBodyNode;
 
-class SubroutineDecNode : public GramTreeNodeBase  {
+class SubroutineDecNode : public GramTreeNodeBase  {     //整个函数的节点
 public:
 	SubroutineDecNode() : GramTreeNodeBase()  {
 		_nodeKind = SUBROUTINE_DEC_K;
@@ -164,13 +191,14 @@ public:
 
 	virtual string getName() override;
 	virtual string getSignName() override;
-
+	string getRetType();
+	GramTreeNodeBase* getFirstParam();
 	int getFuncLocalsNum();
 	SubroutineBodyNode* getSubroutineBody();
 };
 
 
-class SubroutineBodyNode : public GramTreeNodeBase  {
+class SubroutineBodyNode : public GramTreeNodeBase  {    //函数体节点
 public:
 	SubroutineBodyNode() : GramTreeNodeBase()  {
 		_nodeKind = SUBROUTINE_BODY_K;
@@ -182,14 +210,11 @@ public:
 		Statement
 	};
 
-	virtual string getName() override;
-	virtual string getSignName() override;
-
 	int getFuncLocalsNum();
 };
 
 
-class AssignStatement : public GramTreeNodeBase  {
+class AssignStatement : public GramTreeNodeBase  {    //赋值语句节点
 public:
 	AssignStatement() : GramTreeNodeBase()  {
 		_nodeKind = ASSIGN_K;
@@ -201,5 +226,36 @@ public:
 	};
 
 	virtual GramTreeNodeBase* getChildByTag(string name) override;
+	GramTreeNodeBase* getAssginLeft();
+	GramTreeNodeBase* getAssginRight();
+};
+
+
+
+
+class VarDecNode : public GramTreeNodeBase  {   //变量声明节点
+public:
+	VarDecNode() : GramTreeNodeBase()  {
+		_nodeKind = VAR_DEC_K;
+	}
+	enum EVarDec  {
+		VarDec_Type = 0,
+		VarDec_Name
+	};
+	virtual ~VarDecNode(){}
+	GramTreeNodeBase* getVarDecType();    //变量的声明
+	GramTreeNodeBase* getVarDecName();    //变量的名字
+
+};
+
+
+
+
+class ParamNode : public VarDecNode  {    //形参节点
+public:
+	ParamNode() : VarDecNode()  {
+		_nodeKind = PARAM_K;
+	}
+	virtual ~ParamNode(){}
 };
 

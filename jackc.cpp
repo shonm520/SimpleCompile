@@ -28,14 +28,14 @@ int main(int argc, char *argv[])
         filenames.push_back(argv[i]);
         fin.close();
     }
-//     filenames.push_back("./api/Sys.jack");
-//     filenames.push_back("./api/Math.jack");
-//     filenames.push_back("./api/Array.jack");
-//     filenames.push_back("./api/Memory.jack");
-//     filenames.push_back("./api/String.jack");
-//     filenames.push_back("./api/Output.jack");
-//     filenames.push_back("./api/Input.jack");
-//     filenames.push_back("./api/IO.jack");
+    filenames.push_back("./api/Sys.jack");
+    filenames.push_back("./api/Math.jack");
+    filenames.push_back("./api/Array.jack");
+    filenames.push_back("./api/Memory.jack");
+    filenames.push_back("./api/String.jack");
+    filenames.push_back("./api/Output.jack");
+    filenames.push_back("./api/Input.jack");
+    filenames.push_back("./api/IO.jack");
     Parser parser(filenames);
     parser.parse_program();
 	parser.print();

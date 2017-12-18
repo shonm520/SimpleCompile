@@ -1,5 +1,6 @@
 #include <iostream>
 #include "Error.h"
+#include "GramTreeNode.h"
 
 using namespace std;
 
