@@ -9,12 +9,14 @@ using std::stack;
 #include "Scanner.h"
 
 class SubroutineBodyNode;
+class SubroutineDecNode;
 class CompondStatement;
 
 class GramTreeNodeBase
 {
 public:
 	static const int Child_Num_Const = 5;
+	static int s_nCurNodeIndex;
 	enum NodeKind {
 		None, 
 		CLASS_K,
@@ -84,6 +86,8 @@ public:
 		_siblings = 0;
 		_pParent = nullptr;
 		memset(&_child, 0, sizeof(GramTreeNodeBase*)* Child_Num_Const);
+
+		_nodeIndex = ++s_nCurNodeIndex;
 	}
 	~GramTreeNodeBase(){}
 
@@ -96,6 +100,7 @@ protected:
 	string   _strClassName;
 	short    _childIndex;     //子类的索引
 	short    _siblings;       //同等节点的个数
+	int      _nodeIndex;      //当前节点的总索引,用于判断变量是否在声明之前使用
 	  
 	Scanner::Token token_;
 
@@ -117,6 +122,9 @@ public:
 	}
 	NodeKind getNodeKind()  {
 		return _nodeKind;
+	}
+	int getNodeIndex()  {
+		return _nodeIndex;
 	}
 	void setNextNode(GramTreeNodeBase* node)  {
 		if (node)  {
@@ -152,36 +160,16 @@ public:
 	virtual string getSignName() { return ""; }
 	virtual GramTreeNodeBase* getChildByTag(string name) { return nullptr; }
 
-	static stack<SubroutineBodyNode*> s_stackCurSubroutineZone ;          //当前的函数作用域
-	static SubroutineBodyNode* getCurSubroutineBodyNode()  {
-		if (s_stackCurSubroutineZone.size() == 0)  {
-			return nullptr;
-		}
-		return s_stackCurSubroutineZone.top();
-	}
-	static void insertSubRoutineBodyNode(SubroutineBodyNode* node)  {
-		s_stackCurSubroutineZone.push(node);
-	}
-	static void quitSubRoutineBodyZone()  {
-		assert(s_stackCurSubroutineZone.size() > 0);
-		s_stackCurSubroutineZone.pop();
-	}
+	static stack<SubroutineBodyNode*> s_stackCurSubroutineZone;          //当前的函数作用域
+	static SubroutineBodyNode* getCurSubroutineBodyNode();
+	static void insertSubRoutineBodyNode(SubroutineBodyNode* node);
+	static void quitSubRoutineBodyZone();
 
 
 	static stack<CompondStatement*> s_stackCurCompoundStatmentZone;       //当前符合语句作用域
-	static CompondStatement* getCurCompoundStatmentNode()  {
-		if (s_stackCurCompoundStatmentZone.size() == 0)  {
-			return nullptr;
-		}
-		return s_stackCurCompoundStatmentZone.top();
-	}
-	static void insertCompoundStatmentNode(CompondStatement* node)  {
-		s_stackCurCompoundStatmentZone.push(node);
-	}
-	static void quitCompoundStatmentZone()  {
-		assert(s_stackCurCompoundStatmentZone.size() > 0);
-		s_stackCurCompoundStatmentZone.pop();
-	}
+	static CompondStatement* getCurCompoundStatmentNode();  
+	static void insertCompoundStatmentNode(CompondStatement* node);
+	static void quitCompoundStatmentZone();
 };
 
 

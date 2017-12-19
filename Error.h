@@ -2,6 +2,7 @@
 #define _ERROR_H
 
 #include "Scanner.h"
+class GramTreeNodeBase;
 
 extern int errorNum;
 
@@ -64,5 +65,7 @@ void error19();
 void error20();
 
 void error21(string currentClassName, string callerName, int row, string functionName);
+
+void error22(GramTreeNodeBase* node, string msg);
 
 #endif

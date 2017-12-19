@@ -5,6 +5,7 @@
 
 stack<SubroutineBodyNode*> GramTreeNodeBase::s_stackCurSubroutineZone;
 stack<CompondStatement*> GramTreeNodeBase::s_stackCurCompoundStatmentZone;
+int GramTreeNodeBase::s_nCurNodeIndex = 0;
 
 void GramTreeNodeBase:: addChild(GramTreeNodeBase* pChild, int ind )  {
 	if (pChild)   {
@@ -37,6 +38,47 @@ string GramTreeNodeBase::getClassName()       //获得类名
 	}
 	return _strClassName;
 }
+
+SubroutineBodyNode* GramTreeNodeBase::getCurSubroutineBodyNode()
+{
+	if (s_stackCurSubroutineZone.size() == 0)  {
+		return nullptr;
+	}
+	SubroutineBodyNode* node = (SubroutineBodyNode*)s_stackCurSubroutineZone.top();
+	return node;
+}
+
+void GramTreeNodeBase::insertSubRoutineBodyNode(SubroutineBodyNode* node)
+{
+	s_stackCurSubroutineZone.push(node);
+}
+
+void GramTreeNodeBase::quitSubRoutineBodyZone()  
+{
+	assert(s_stackCurSubroutineZone.size() > 0);
+	s_stackCurSubroutineZone.pop();
+}
+
+
+CompondStatement* GramTreeNodeBase::getCurCompoundStatmentNode()  
+{
+	if (s_stackCurCompoundStatmentZone.size() == 0)  {
+		return nullptr;
+	}
+	return s_stackCurCompoundStatmentZone.top();
+}
+
+void GramTreeNodeBase::insertCompoundStatmentNode(CompondStatement* node)  
+{    //在if while 开始后进入
+	s_stackCurCompoundStatmentZone.push(node);
+}
+
+void GramTreeNodeBase::quitCompoundStatmentZone()  
+{
+	assert(s_stackCurCompoundStatmentZone.size() > 0);
+	s_stackCurCompoundStatmentZone.pop();
+}
+
 
 
 

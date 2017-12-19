@@ -169,3 +169,12 @@ void error21(string currentClassName, string callerName, int row, string functio
 	cerr << "Error in class " << currentClassName << " in line " << row
 		<<", function(or method) "<< "\'" << functionName << "\' " << "is not defined" << endl;
 }
+
+void error22(GramTreeNodeBase* node, string msg)
+{
+	errorNum++;
+	cerr << "Error in class " << node->getClassName() << " in line " << node->getRow()
+		<< ", in function(or method) " << "\'" 
+		<<  node->getCurSubroutineBodyNode()->getParentNode()->getName() 
+		<< "\', " << "½Úµã " << node->getLexeme() << "," << msg << endl;
+}

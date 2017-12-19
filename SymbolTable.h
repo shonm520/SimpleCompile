@@ -18,6 +18,7 @@ public:
         string type;    // int, float, char, string
         Kind kind;      // kind : static, field, var, argument 
         int index;
+		int nodeIndex;  //当前节点的总索引,用于判断变量是否在声明之前使用
         vector<string> args;
         Info()
         {

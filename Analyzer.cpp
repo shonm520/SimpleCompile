@@ -31,6 +31,11 @@ void Analyzer::checkExpression(Parser::TreeNode *t)
 					error5(strClassName, t->getRow(), t->getLexeme());
                 }
             }
+			else  {
+				if (info.nodeIndex > t->getNodeIndex())  {
+					error22(t, "变量在声明前被使用");
+				}
+			}
         }
         break;
         case GramTreeNodeBase::ARRAY_K:
@@ -305,6 +310,10 @@ void Analyzer::buildStatements(Parser::TreeNode *t)
         checkStatement(t);
         for (int i = 0; i < 5; i++)
             buildStatements(t->getChildByIndex(i));
+
+		if (t->getNodeKind() == GramTreeNodeBase::SUBROUTINE_DEC_K)  {
+			t->quitSubRoutineBodyZone();
+		}
         t = t->getNextNode();
     }
 }

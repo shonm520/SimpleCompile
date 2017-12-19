@@ -74,7 +74,7 @@ void SymbolTable::insertClassesTable(Parser::TreeNode *t)
             }
         }
     }
-    else if (t->getNodeKind() == Parser::SUBROUTINE_DEC_K)      //在这里插入类函数声明的信息    
+    else if (t->getNodeKind() == Parser::SUBROUTINE_DEC_K)                       //在这里插入类函数声明的信息,函数的类型,返回值,名字等信息,不包括函数的局部变量    
     {                                                           
         Info info;                                             
 		string signName = t->getSignName();
@@ -103,7 +103,8 @@ void SymbolTable::insertSubroutineTable(Parser::TreeNode *t)
 	if (t->getNodeKind() == Parser::CLASS_K)
 		_strCurrentClass = t->getName();
     else if (t->getNodeKind() == GramTreeNodeBase::SUBROUTINE_DEC_K)                             
-    {                                                                               
+    {   
+		t->insertSubRoutineBodyNode((SubroutineBodyNode*)t->getChildByIndex(SubroutineDecNode::Body));
         initialSubroutineTable();                                                   
         string className = Parser::getCallerName(t->getName());       
         string functionName = Parser::getFunctionName(t->getName());   
@@ -152,6 +153,7 @@ void SymbolTable::insertSubroutineTable(Parser::TreeNode *t)
         {
             string varName = p->getLexeme();
             info.index = _var_index++;
+			info.nodeIndex = p->getNodeIndex();
             if (_mapSubroutineTable.insert({ varName, info }).second == false)
             {
                 error2(_strCurrentClass, p->getRow(), info.type, varName);
