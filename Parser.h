@@ -294,9 +294,9 @@ private:
     TreeNode * parse_param_list();
     TreeNode * parse_param();
     TreeNode * parse_subroutine_body();
-	TreeNode * parse_var_dec_list(/*TreeNode* routineBody*/);
-	TreeNode * parse_var_dec(/*TreeNode* routineBody*/);
-	TreeNode * parse_statements(/*TreeNode* routineBody = nullptr*/);
+	TreeNode * parse_var_dec_list(TreeNodeList& statementNodeList);
+	TreeNode * parse_var_dec(TreeNodeList& statementNodeList);
+	TreeNode * parse_statements();
     TreeNode * parse_statement();
     TreeNode * parse_assign_statement();
     TreeNode * parse_left_value();

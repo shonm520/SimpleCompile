@@ -346,14 +346,14 @@ Parser::TreeNode *Parser::parse_subroutine_body()
 	return t;
 }
 
-Parser::TreeNode *Parser::parse_var_dec_list()
+Parser::TreeNode *Parser::parse_var_dec_list(TreeNodeList& statementNodeList)
 {
 	TreeNodeList nodeList;
 Loop:
 	Scanner::Token token = getToken();
 	if (isBasicType(token.lexeme))  {
 		ungetToken();
-		TreeNode *q = parse_var_dec();
+		TreeNode *q = parse_var_dec(statementNodeList);
 		nodeList.Push(q);
 		goto Loop;
 	}
@@ -362,7 +362,7 @@ Loop:
 		if (token.kind == Scanner::ID) {
 			ungetToken();
 			ungetToken();
-			TreeNode *q = parse_var_dec();
+			TreeNode *q = parse_var_dec(statementNodeList);
 			nodeList.Push(q);
 			goto Loop;
 		}
@@ -372,7 +372,7 @@ Loop:
 	return nodeList.getHeadNode();
 }
 
-Parser::TreeNode *Parser::parse_var_dec()
+Parser::TreeNode *Parser::parse_var_dec(TreeNodeList& statementNodeList)
 {
 	TreeNode *t = new VarDecNode();
 	Scanner::Token token;
@@ -383,6 +383,7 @@ Parser::TreeNode *Parser::parse_var_dec()
 		ungetToken();
 		ungetToken();
 		TreeNode* node = parse_assign_statement();
+		statementNodeList.Push(node);
 		SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
 		if (routineBody)  {             //在声明处的赋值语句就要放到函数体的赋值语句中去 ie: int a = 1 分解为两个语句 
 			node->setParentNode(routineBody);
@@ -407,7 +408,7 @@ Parser::TreeNode *Parser::parse_statements()
 			_hasRetStatement = true;
 		if (isVarDec && (isBasicType(token.lexeme) || token.kind == Scanner::ID))  {   //变量声明int a = 2;或者类声明String s
 			ungetToken();
-			TreeNode* q = parse_var_dec_list();
+			TreeNode* q = parse_var_dec_list(nodeList);
 			if (q)  {
 				SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
 				if (routineBody)  {
