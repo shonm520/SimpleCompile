@@ -11,6 +11,7 @@ using std::stack;
 class SubroutineBodyNode;
 class SubroutineDecNode;
 class CompondStatement;
+class ClassTreeNode;
 
 class GramTreeNodeBase
 {
@@ -102,20 +103,20 @@ protected:
 	short    _siblings;       //同等节点的个数
 	int      _nodeIndex;      //当前节点的总索引,用于判断变量是否在声明之前使用
 	  
-	Scanner::Token token_;
+	Scanner::Token _token;
 
 public:
 	void setToken(Scanner::Token& t)  {
-		token_ = t;
+		_token = t;
 	}
 	const string getLexeme()  {
-		return token_.lexeme;
+		return _token.lexeme;
 	}
 	void setLexeme(string& str)  {
-		token_.lexeme = str;
+		_token.lexeme = str;
 	}
 	unsigned int getRow()  {
-		return token_.row;
+		return _token.row;
 	}
 	void setNodeKind(int kind)  {
 		_nodeKind = (NodeKind)kind;
@@ -160,7 +161,31 @@ public:
 	virtual string getSignName() { return ""; }
 	virtual GramTreeNodeBase* getChildByTag(string name) { return nullptr; }
 
-	static stack<SubroutineBodyNode*> s_stackCurSubroutineZone;          //当前的函数作用域
+	virtual GramTreeNodeBase* clone() {
+		auto node = new GramTreeNodeBase;
+		node->_nodeKind = _nodeKind;
+		node->_token = _token;
+		node->_strClassName = _strClassName;
+		node->_pParent = _pParent;
+		node->_strNodeDes = _strNodeDes;
+		node->_childIndex = _childIndex;
+		node->_siblings = _siblings;
+		return  node;
+	}
+
+
+	static stack<ClassTreeNode*> s_stackCurClassZone;                      //当前类的作用域
+	static ClassTreeNode* getCurCurClassNode();
+	static void insertClassNode(ClassTreeNode* node);
+	static void quitClassZone();
+
+
+	static stack<SubroutineDecNode*> s_stackCurSubroutineZone;              //当前的函数作用域
+	static SubroutineDecNode* getCurSubroutineNode();
+	static void insertSubRoutineNode(SubroutineDecNode* node);
+	static void quitSubRoutineZone();
+
+	static stack<SubroutineBodyNode*> s_stackCurSubroutineBodyZone;          //当前的函数体作用域
 	static SubroutineBodyNode* getCurSubroutineBodyNode();
 	static void insertSubRoutineBodyNode(SubroutineBodyNode* node);
 	static void quitSubRoutineBodyZone();
@@ -233,6 +258,7 @@ public:
 class ClassTreeNode : public GramTreeNodeBase  {   //类类型节点,所有类型的最终parent指向该类
 public:
 	ClassTreeNode(int nK = None) : GramTreeNodeBase(nK)  {
+		insertClassNode(this);
 		_nodeKind = CLASS_K;
 	}
 	virtual ~ClassTreeNode(){}
@@ -248,8 +274,8 @@ public:
 		return getName();
 	}
 
-private:
-	string _strClassName;
+	bool hasVarDecInField(GramTreeNodeBase* node);       //函数的变量是否在类变量列表中
+
 };
 
 
@@ -259,6 +285,7 @@ class SubroutineDecNode : public GramTreeNodeBase  {     //整个函数的节点
 public:
 	SubroutineDecNode() : GramTreeNodeBase()  {
 		_nodeKind = SUBROUTINE_DEC_K;
+		insertSubRoutineNode(this);
 	}
 	virtual ~SubroutineDecNode(){}
 
@@ -276,8 +303,11 @@ public:
 	GramTreeNodeBase* getFirstParam();
 	int getFuncLocalsNum();
 	SubroutineBodyNode* getSubroutineBody();
+
+	bool hasVarDecInParams(GramTreeNodeBase* node);       //函数的变量是否在参数列表中
 };
 
+class VarDecNode;
 
 class SubroutineBodyNode : public GramTreeNodeBase  {    //函数体节点
 public:
@@ -306,6 +336,8 @@ public:
 		GramTreeNodeBase::addChild(_varDecList.getHeadNode(), VarDec);
 		GramTreeNodeBase::addChild(_statementList.getHeadNode(), Statement);
 	}
+	bool hasVarDec(GramTreeNodeBase* node);
+	VarDecNode* getCurVarDec();
 
 	int getFuncLocalsNum();
 };

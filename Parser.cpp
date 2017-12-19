@@ -87,6 +87,7 @@ Parser::TreeNode *Parser::parse_class_list()
 		_strCurParserFileName = filenameIter->substr(filenameIter->size() - begin, begin - 5);
 		_scanner.resetRow();
 		TreeNode *q = parse_class();
+		TreeNode::quitClassZone();
 		if (getToken().kind != Scanner::ENDOFFILE)
 			cerr << "Syntax Error in class " << _strCurParserFileName << ": unexpected token before EOF " << endl;
 		nodeList.Push(q);
@@ -221,7 +222,7 @@ Parser::TreeNode *Parser::parse_subroutine_dec_list()
 		   token.lexeme == "method") {
 		ungetToken();
 		TreeNode *q = parse_subroutin_dec();    //解析其中一个函数
-		
+		TreeNode::quitSubRoutineZone();
 		nodeList.Push(q);
 		
 		token = getToken();
@@ -509,11 +510,24 @@ Parser::TreeNode *Parser::parse_statement()
 Parser::TreeNode *Parser::parse_assign_statement()
 {
 	TreeNode *t = new AssignStatement();
-	t->addChild(parse_left_value(), AssignStatement::AssignLetf);
+	TreeNode* left_val = parse_left_value();
+	t->addChild(left_val, AssignStatement::AssignLetf);
+	auto pCurBody = TreeNode::getCurSubroutineBodyNode();
+	auto pCurRoutine = TreeNode::getCurSubroutineNode();
+	auto pCurClass = TreeNode::getCurCurClassNode();
+	if (!pCurClass->hasVarDecInField(left_val) &&
+		!pCurRoutine->hasVarDecInParams(left_val) &&
+		!pCurBody->hasVarDec(left_val))  {                   //为了能让 int a= 1, b=2;工作  为了保证b也有类型,必须先查找类变量,函数参数,没有就添加上一个的类型
+		auto new_left_val = new VarDecNode();
+		GramTreeNodeBase* new_var_type = pCurBody->getCurVarDec()->getChildByIndex(VarDecNode::VarDec_Type)->clone();
+		new_left_val->addChild(new_var_type, VarDecNode::VarDec_Type);
+		new_left_val->addChild(left_val, VarDecNode::VarDec_Name);
+		pCurBody->addVarDec(new_left_val);
+	}
 	Scanner::Token token = getToken();
 	t->addChild(parse_expression(), AssignStatement::AssignRight);
 	token = getToken();
-	if (token.lexeme != ";") {
+	if (token.lexeme != ";" && token.lexeme != ",") {      //赋值语句之后也有可能是,例如int a= 1, b=2;
 		syntaxError(_strCurParserFileName, ";", token);
 		return t;
 	}

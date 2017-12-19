@@ -2,8 +2,9 @@
 #include "GramTreeNode.h"
 
 
-
-stack<SubroutineBodyNode*> GramTreeNodeBase::s_stackCurSubroutineZone;
+stack<ClassTreeNode*> GramTreeNodeBase::s_stackCurClassZone;
+stack<SubroutineDecNode*> GramTreeNodeBase::s_stackCurSubroutineZone;
+stack<SubroutineBodyNode*> GramTreeNodeBase::s_stackCurSubroutineBodyZone;
 stack<CompondStatement*> GramTreeNodeBase::s_stackCurCompoundStatmentZone;
 int GramTreeNodeBase::s_nCurNodeIndex = 0;
 
@@ -39,25 +40,86 @@ string GramTreeNodeBase::getClassName()       //获得类名
 	return _strClassName;
 }
 
-SubroutineBodyNode* GramTreeNodeBase::getCurSubroutineBodyNode()
+
+ClassTreeNode* GramTreeNodeBase::getCurCurClassNode()
+{
+	if (s_stackCurClassZone.size() == 0)  {
+		return nullptr;
+	}
+	return s_stackCurClassZone.top();
+}
+
+void GramTreeNodeBase::insertClassNode(ClassTreeNode* node)
+{
+	s_stackCurClassZone.push(node);
+}
+
+void GramTreeNodeBase::quitClassZone()
+{
+	assert(s_stackCurClassZone.size() > 0);
+	s_stackCurClassZone.pop();
+}
+
+
+
+
+bool ClassTreeNode::hasVarDecInField(GramTreeNodeBase* node)
+{
+	auto field_var = _child[Class_VarDec];
+	while (field_var)  {
+		if (field_var->getChildByIndex(2)->getLexeme() == node->getLexeme())  {
+			return true;
+		}
+		field_var = field_var->getNextNode();
+	}
+	return false;
+}
+
+
+
+
+SubroutineDecNode* GramTreeNodeBase::getCurSubroutineNode()
 {
 	if (s_stackCurSubroutineZone.size() == 0)  {
 		return nullptr;
 	}
-	SubroutineBodyNode* node = (SubroutineBodyNode*)s_stackCurSubroutineZone.top();
+	return s_stackCurSubroutineZone.top();
+}
+
+void GramTreeNodeBase::insertSubRoutineNode(SubroutineDecNode* node)
+{
+	s_stackCurSubroutineZone.push(node);
+}
+
+void GramTreeNodeBase::quitSubRoutineZone()
+{
+	assert(s_stackCurSubroutineZone.size() > 0);
+	s_stackCurSubroutineZone.pop();
+}
+
+
+
+SubroutineBodyNode* GramTreeNodeBase::getCurSubroutineBodyNode()
+{
+	if (s_stackCurSubroutineBodyZone.size() == 0)  {
+		return nullptr;
+	}
+	SubroutineBodyNode* node = (SubroutineBodyNode*)s_stackCurSubroutineBodyZone.top();
 	return node;
 }
 
 void GramTreeNodeBase::insertSubRoutineBodyNode(SubroutineBodyNode* node)
 {
-	s_stackCurSubroutineZone.push(node);
+	s_stackCurSubroutineBodyZone.push(node);
 }
 
 void GramTreeNodeBase::quitSubRoutineBodyZone()  
 {
-	assert(s_stackCurSubroutineZone.size() > 0);
-	s_stackCurSubroutineZone.pop();
+	assert(s_stackCurSubroutineBodyZone.size() > 0);
+	s_stackCurSubroutineBodyZone.pop();
 }
+
+
 
 
 CompondStatement* GramTreeNodeBase::getCurCompoundStatmentNode()  
@@ -122,6 +184,19 @@ GramTreeNodeBase* SubroutineDecNode::getFirstParam()
 	return _child[SubroutineFiled::Params];
 }
 
+bool SubroutineDecNode::hasVarDecInParams(GramTreeNodeBase* node)
+{
+	auto params = _child[SubroutineDecNode::Params];
+	while (params)  {
+		if (params->getChildByIndex(VarDecNode::VarDec_Name)->getLexeme() == node->getLexeme())  {
+			return true;
+		}
+		params = params->getNextNode();
+	}
+	return false;
+}
+
+
 
 
 
@@ -141,6 +216,27 @@ int SubroutineBodyNode::getFuncLocalsNum()
 		nlocals = nlocals + q->getChildByIndex(VarDecNode::EVarDec::VarDec_Name)->getSiblings();
 	}
 	return nlocals;
+}
+
+bool SubroutineBodyNode::hasVarDec(GramTreeNodeBase* node)  {
+	auto p = _varDecList.getHeadNode();
+	if (!p)  {
+		return true;
+	}
+	while (p)  {
+		auto var_name = p->getChildByIndex(VarDecNode::VarDec_Name);
+		for (; var_name != nullptr; var_name = var_name->getNextNode())  {
+			if (var_name->getLexeme() == node->getLexeme())  {
+				return true;
+			}
+		}
+		p = p->getNextNode();
+	}
+	return false;
+}
+
+VarDecNode* SubroutineBodyNode::getCurVarDec()  {
+	return (VarDecNode*)_varDecList.getCurNode();
 }
 
 
