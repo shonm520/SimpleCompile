@@ -186,56 +186,56 @@ public:
 		
     };*/
 
-	typedef GramTreeNodeBase TreeNode;
-
-	class TreeNodeList
-	{
-		TreeNode* _head;
-		TreeNode* _cur;
-	public:
-		TreeNodeList()  {
-			_head = _cur =  nullptr;
-		}
-		void Push(TreeNode* node)  {
-			if (node != nullptr)  {
-				if (_head == nullptr)  {
-					TreeNode* curNode = getCurNode(node);
-					if (curNode != node)  {  //要加入的节点是个链节点则要拆散一个一个的加
-						_head = node;
-						_cur = curNode;
-					}
-					else  {
-						_head = _cur = node;
-					}
-				}
-				else  {
-					TreeNode* curNode = getCurNode(node);  //节点的当前节点,即最后一个节点
-					if (curNode != node)  {                //要加入的节点是个链节点则要拆散一个一个的加
-						_cur->setNextNode(node);
-						_cur = curNode;
-					}
-					else  {
-						_cur->setNextNode(node);
-						_cur = node;
-					}
-				}
-			}
-		}
-		TreeNode* getHeadNode()  {
-			return _head;
-		}
-		TreeNode* getCurNode()  {
-			return _cur;
-		}
-		static TreeNode* getCurNode(TreeNode* node)  {
-			TreeNode* curNode = nullptr;
-			while (node)  {
-				curNode = node;
-				node = node->getNextNode();
-			}
-			return curNode;
-		}
-	}; 
+ 	typedef GramTreeNodeBase TreeNode;
+// 
+// 	class TreeNodeList
+// 	{
+// 		TreeNode* _head;
+// 		TreeNode* _cur;
+// 	public:
+// 		TreeNodeList()  {
+// 			_head = _cur =  nullptr;
+// 		}
+// 		void Push(TreeNode* node)  {
+// 			if (node != nullptr)  {
+// 				if (_head == nullptr)  {
+// 					TreeNode* curNode = getCurNode(node);
+// 					if (curNode != node)  {  //要加入的节点是个链节点则要拆散一个一个的加
+// 						_head = node;
+// 						_cur = curNode;
+// 					}
+// 					else  {
+// 						_head = _cur = node;
+// 					}
+// 				}
+// 				else  {
+// 					TreeNode* curNode = getCurNode(node);  //节点的当前节点,即最后一个节点
+// 					if (curNode != node)  {                //要加入的节点是个链节点则要拆散一个一个的加
+// 						_cur->setNextNode(node);
+// 						_cur = curNode;
+// 					}
+// 					else  {
+// 						_cur->setNextNode(node);
+// 						_cur = node;
+// 					}
+// 				}
+// 			}
+// 		}
+// 		TreeNode* getHeadNode()  {
+// 			return _head;
+// 		}
+// 		TreeNode* getCurNode()  {
+// 			return _cur;
+// 		}
+// 		static TreeNode* getCurNode(TreeNode* node)  {
+// 			TreeNode* curNode = nullptr;
+// 			while (node)  {
+// 				curNode = node;
+// 				node = node->getNextNode();
+// 			}
+// 			return curNode;
+// 		}
+// 	}; 
 
 	struct CirQueue
 	{
@@ -294,9 +294,9 @@ private:
     TreeNode * parse_param_list();
     TreeNode * parse_param();
     TreeNode * parse_subroutine_body();
-    TreeNode * parse_var_dec_list();
-    TreeNode * parse_var_dec();
-    TreeNode * parse_statements();
+	TreeNode * parse_var_dec_list(/*TreeNode* routineBody*/);
+	TreeNode * parse_var_dec(/*TreeNode* routineBody*/);
+	TreeNode * parse_statements(/*TreeNode* routineBody = nullptr*/);
     TreeNode * parse_statement();
     TreeNode * parse_assign_statement();
     TreeNode * parse_left_value();

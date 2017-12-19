@@ -1,9 +1,15 @@
 #pragma once
 #include <string>
 #include <map>
+#include <stack>
+#include <cassert>
 using std::string;
+using std::stack;
 
 #include "Scanner.h"
+
+class SubroutineBodyNode;
+class CompondStatement;
 
 class GramTreeNodeBase
 {
@@ -127,6 +133,9 @@ public:
 	GramTreeNodeBase* getParentNode()  {
 		return _pParent;
 	}
+	void setParentNode(GramTreeNodeBase* node)  {
+		_pParent = node;
+	}
 
 	void addChild(GramTreeNodeBase* pChild, int ind = -1);
 
@@ -142,7 +151,91 @@ public:
 	virtual string getName() { return ""; }
 	virtual string getSignName() { return ""; }
 	virtual GramTreeNodeBase* getChildByTag(string name) { return nullptr; }
-	
+
+	static stack<SubroutineBodyNode*> s_stackCurSubroutineZone ;          //当前的函数作用域
+	static SubroutineBodyNode* getCurSubroutineBodyNode()  {
+		if (s_stackCurSubroutineZone.size() == 0)  {
+			return nullptr;
+		}
+		return s_stackCurSubroutineZone.top();
+	}
+	static void insertSubRoutineBodyNode(SubroutineBodyNode* node)  {
+		s_stackCurSubroutineZone.push(node);
+	}
+	static void quitSubRoutineBodyZone()  {
+		assert(s_stackCurSubroutineZone.size() > 0);
+		s_stackCurSubroutineZone.pop();
+	}
+
+
+	static stack<CompondStatement*> s_stackCurCompoundStatmentZone;       //当前符合语句作用域
+	static CompondStatement* getCurCompoundStatmentNode()  {
+		if (s_stackCurCompoundStatmentZone.size() == 0)  {
+			return nullptr;
+		}
+		return s_stackCurCompoundStatmentZone.top();
+	}
+	static void insertCompoundStatmentNode(CompondStatement* node)  {
+		s_stackCurCompoundStatmentZone.push(node);
+	}
+	static void quitCompoundStatmentZone()  {
+		assert(s_stackCurCompoundStatmentZone.size() > 0);
+		s_stackCurCompoundStatmentZone.pop();
+	}
+};
+
+
+
+
+typedef GramTreeNodeBase TreeNode;
+
+class TreeNodeList
+{
+	TreeNode* _head;
+	TreeNode* _cur;
+public:
+	TreeNodeList()  {
+		_head = _cur = nullptr;
+	}
+	void Push(TreeNode* node)  {     //这里添加一个参数....
+		if (node != nullptr)  {
+			if (_head == nullptr)  {
+				TreeNode* curNode = getCurNode(node);
+				if (curNode != node)  {  //要加入的节点是个链节点则要拆散一个一个的加
+					_head = node;
+					_cur = curNode;
+				}
+				else  {
+					_head = _cur = node;
+				}
+			}
+			else  {
+				TreeNode* curNode = getCurNode(node);  //节点的当前节点,即最后一个节点
+				if (curNode != node)  {                //要加入的节点是个链节点则要拆散一个一个的加
+					_cur->setNextNode(node);
+					_cur = curNode;
+				}
+				else  {
+					_cur->setNextNode(node);
+					_cur = node;
+				}
+			}
+		}
+	}
+	TreeNode* getHeadNode()  {
+		return _head;
+	}
+	TreeNode* getCurNode()  {
+		return _cur;
+	}
+	static TreeNode* getCurNode(TreeNode* node)  {
+		TreeNode* curNode = nullptr;
+		while (node)  {
+			curNode = node;
+			node = node->getNextNode();
+		}
+		return curNode;
+	}
 };
 
 
@@ -202,6 +295,7 @@ class SubroutineBodyNode : public GramTreeNodeBase  {    //函数体节点
 public:
 	SubroutineBodyNode() : GramTreeNodeBase()  {
 		_nodeKind = SUBROUTINE_BODY_K;
+		insertSubRoutineBodyNode(this);
 	}
 	virtual ~SubroutineBodyNode(){}
 
@@ -209,6 +303,21 @@ public:
 		VarDec = 0,
 		Statement
 	};
+
+	TreeNodeList _statementList;
+	TreeNodeList _varDecList;
+	void addStatement(GramTreeNodeBase* node)  {
+		if (getCurCompoundStatmentNode() == nullptr)  {     //没有复合语句(if,while等)才添加子语句,因为在if语句中会作为子语句被添加的
+			_statementList.Push(node);
+		}
+	}
+	void addVarDec(GramTreeNodeBase* node)  {
+		_varDecList.Push(node);
+	}
+	void addBodyChild()  {
+		GramTreeNodeBase::addChild(_varDecList.getHeadNode(), VarDec);
+		GramTreeNodeBase::addChild(_statementList.getHeadNode(), Statement);
+	}
 
 	int getFuncLocalsNum();
 };
@@ -228,6 +337,16 @@ public:
 	virtual GramTreeNodeBase* getChildByTag(string name) override;
 	GramTreeNodeBase* getAssginLeft();
 	GramTreeNodeBase* getAssginRight();
+};
+
+
+class CompondStatement : public GramTreeNodeBase  {    //赋值语句节点
+public:
+	CompondStatement(int nK) : GramTreeNodeBase(nK)  {
+		insertCompoundStatmentNode(this);
+	}
+	virtual ~CompondStatement(){}
+
 };
 
 

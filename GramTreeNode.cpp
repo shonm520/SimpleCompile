@@ -1,6 +1,11 @@
 #include "Scanner.h"
 #include "GramTreeNode.h"
 
+
+
+stack<SubroutineBodyNode*> GramTreeNodeBase::s_stackCurSubroutineZone;
+stack<CompondStatement*> GramTreeNodeBase::s_stackCurCompoundStatmentZone;
+
 void GramTreeNodeBase:: addChild(GramTreeNodeBase* pChild, int ind )  {
 	if (pChild)   {
 		if (ind >= 0)  {
@@ -12,7 +17,7 @@ void GramTreeNodeBase:: addChild(GramTreeNodeBase* pChild, int ind )  {
 			p->_pParent = this;
 			simbling++;
 		}
-		pChild->_siblings = simbling;     //大哥存有同等兄弟节点的个数,不是所有父节点孩子的个数
+		pChild->_siblings = ((simbling == 0) ? 1 : simbling);     //大哥存有同等兄弟节点的个数,不是所有父节点孩子的个数
 	}
 }
 

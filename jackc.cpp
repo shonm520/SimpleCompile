@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     filenames.push_back("./api/IO.jack");
     Parser parser(filenames);
     parser.parse_program();
-	parser.print();
+	//parser.print();
     if (!hasError())
     {
         Analyzer analyzer(parser.getSyntaxTree());

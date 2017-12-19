@@ -271,6 +271,7 @@ Parser::TreeNode *Parser::parse_subroutin_dec()
 		return t;
 	}
 	t->addChild(parse_subroutine_body(), SubroutineDecNode::Body);
+	t->quitSubRoutineBodyZone();
 	return t;
 }
 
@@ -330,8 +331,8 @@ Parser::TreeNode *Parser::parse_subroutine_body()
 		syntaxError(_strCurParserFileName, "{", token);
 		return t;
 	}
-	t->addChild(parse_var_dec_list(), SubroutineBodyNode::VarDec);
-	t->addChild(parse_statements(), SubroutineBodyNode::Statement);
+
+	parse_statements();
 
 	token = getToken();
 	if (token.lexeme != "}") {
@@ -382,7 +383,11 @@ Parser::TreeNode *Parser::parse_var_dec()
 		ungetToken();
 		ungetToken();
 		TreeNode* node = parse_assign_statement();
-		t->setNextNode(node);
+		SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
+		if (routineBody)  {             //在声明处的赋值语句就要放到函数体的赋值语句中去 ie: int a = 1 分解为两个语句 
+			node->setParentNode(routineBody);
+			routineBody->addStatement(node);
+		}
 	}
 	else if (token.lexeme != ";") {
 		syntaxError(_strCurParserFileName, ";", token);
@@ -393,7 +398,7 @@ Parser::TreeNode *Parser::parse_var_dec()
 
 Parser::TreeNode *Parser::parse_statements()
 {
-	TreeNodeList nodeList;
+	TreeNodeList nodeList;          //在if while语句中仍然需要保存子语句
 	Scanner::Token token = getToken();
 	bool isVarDec = true;
 	while (token.lexeme == "if" || token.lexeme == "while" || token.lexeme == "return" || token.kind == Scanner::ID || 
@@ -404,7 +409,13 @@ Parser::TreeNode *Parser::parse_statements()
 			ungetToken();
 			TreeNode* q = parse_var_dec_list();
 			if (q)  {
-				nodeList.Push(q);
+				SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
+				if (routineBody)  {
+					if (routineBody->getNodeKind() == SUBROUTINE_BODY_K)  {
+						q->setParentNode(routineBody);
+						routineBody->addVarDec(q);
+					}
+				}
 			}
 			else  {
 				isVarDec = false;
@@ -417,6 +428,8 @@ Parser::TreeNode *Parser::parse_statements()
 				ungetToken();
 				TreeNode *q = parse_statement();
 				nodeList.Push(q);
+				SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
+				routineBody->addStatement(q);
 			}
 			else {
 				ungetToken();
@@ -428,11 +441,15 @@ Parser::TreeNode *Parser::parse_statements()
 			ungetToken();
 			TreeNode *q = parse_statement();
 			nodeList.Push(q);
+			SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
+			routineBody->addStatement(q);
 			isVarDec = true;
 		}
 		token = getToken();
 	}
 	ungetToken();
+	SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
+	routineBody->addBodyChild();
 	return nodeList.getHeadNode();
 }
 
@@ -443,10 +460,12 @@ Parser::TreeNode *Parser::parse_statement()
 	if (token.lexeme == "if") {
 		ungetToken();
 		t = parse_if_statement();
+		TreeNode::quitCompoundStatmentZone();
 	}
 	else if (token.lexeme == "while") {
 		ungetToken();
 		t = parse_while_statement();
+		TreeNode::quitCompoundStatmentZone();
 	}
 	else if (token.lexeme == "return") {
 		ungetToken();
@@ -525,8 +544,7 @@ Parser::TreeNode *Parser::parse_left_value()
 
 Parser::TreeNode *Parser::parse_if_statement()
 {
-	TreeNode *t = new TreeNode(IF_STATEMENT_K);
-	t->setNodeKind(IF_STATEMENT_K);
+	TreeNode *t = new CompondStatement(IF_STATEMENT_K);
 	Scanner::Token token = getToken();
 	token = getToken();
 	if (token.lexeme != "(") {
@@ -571,8 +589,7 @@ Parser::TreeNode *Parser::parse_if_statement()
 
 Parser::TreeNode *Parser::parse_while_statement()
 {
-	TreeNode *t = new TreeNode(WHILE_STATEMENT_K);
-	t->setNodeKind(WHILE_STATEMENT_K);
+	TreeNode *t = new CompondStatement(WHILE_STATEMENT_K);
 	Scanner::Token token = getToken();
 	token = getToken();
 	if (token.lexeme != "(") {
