@@ -142,8 +142,12 @@ public:
 	GramTreeNodeBase* getParentNode()  {
 		return _pParent;
 	}
-	void setParentNode(GramTreeNodeBase* node)  {
-		_pParent = node;
+	void setParentNode(GramTreeNodeBase* node)  {   //也要把亲兄弟指定父类
+		auto cur = this;
+		while (cur)  {
+			cur->_pParent = node;
+			cur = cur->getNextNode();
+		}
 	}
 
 	void addChild(GramTreeNodeBase* pChild, int ind = -1);
@@ -174,13 +178,15 @@ public:
 	}
 
 
-	static stack<ClassTreeNode*> s_stackCurClassZone;                      //当前类的作用域
+	static GramTreeNodeBase* s_curVarDecType;                                  //当前的类型声明,用于解析int a=1,b=2;b的类型
+
+	static stack<ClassTreeNode*> s_stackCurClassZone;                        //当前类的作用域
 	static ClassTreeNode* getCurCurClassNode();
 	static void insertClassNode(ClassTreeNode* node);
 	static void quitClassZone();
 
 
-	static stack<SubroutineDecNode*> s_stackCurSubroutineZone;              //当前的函数作用域
+	static stack<SubroutineDecNode*> s_stackCurSubroutineZone;               //当前的函数作用域
 	static SubroutineDecNode* getCurSubroutineNode();
 	static void insertSubRoutineNode(SubroutineDecNode* node);
 	static void quitSubRoutineZone();
@@ -191,8 +197,8 @@ public:
 	static void quitSubRoutineBodyZone();
 
 
-	static stack<CompondStatement*> s_stackCurCompoundStatmentZone;       //当前符合语句作用域
-	static CompondStatement* getCurCompoundStatmentNode();  
+	static stack<CompondStatement*> s_stackCurCompoundStatmentZone;          //当前符合语句作用域
+	static CompondStatement* getCurCompoundStatmentNode(int* pNum = 0);  
 	static void insertCompoundStatmentNode(CompondStatement* node);
 	static void quitCompoundStatmentZone();
 };

@@ -165,14 +165,23 @@ Parser::TreeNode *Parser::parse_class_var_dec()
 
 Parser::TreeNode *Parser::parse_var_name_list()
 {
+	TreeNodeList nodeList;
 	TreeNode *t = new TreeNode;
 	Scanner::Token token = getToken();
 	if (token.kind != Scanner::ID) {
 		syntaxError(_strCurParserFileName, "identifier", token);
 		return t;
 	}
+	int num_of_compound = 0;
+	if (TreeNode::getCurCompoundStatmentNode(&num_of_compound))  {
+		if (num_of_compound > 0)  {
+			char szNum[10] = { 0 };
+			scanf_s(szNum, "%d", num_of_compound);
+			token.lexeme = szNum + token.lexeme;
+		}
+	}
 	t->setToken(token);
-	TreeNode *p = t;
+	nodeList.Push(t);
 	token = getToken();
 	while (token.lexeme == ",") {
 		token = getToken();
@@ -182,12 +191,11 @@ Parser::TreeNode *Parser::parse_var_name_list()
 		}
 		TreeNode *q = new TreeNode;
 		q->setToken(token);
-		p->setNextNode(q);
-		p = q;
-		token = getToken();
+		nodeList.Push(q);
+ 		token = getToken();
 	}
 	ungetToken();
-	return t;
+	return nodeList.getHeadNode();
 }
 
 Parser::TreeNode *Parser::parse_type()
@@ -350,13 +358,12 @@ Parser::TreeNode *Parser::parse_subroutine_body()
 Parser::TreeNode *Parser::parse_var_dec_list(TreeNodeList& statementNodeList)
 {
 	TreeNodeList nodeList;
-Loop:
 	Scanner::Token token = getToken();
 	if (isBasicType(token.lexeme))  {
 		ungetToken();
 		TreeNode *q = parse_var_dec(statementNodeList);
 		nodeList.Push(q);
-		goto Loop;
+		TreeNode::s_curVarDecType = q->getChildByIndex(VarDecNode::VarDec_Type);     //int a,b 先保存a的声明,后面要给b的
 	}
 	else if (token.kind == Scanner::ID) { // 类变量声明
 		token = getToken();
@@ -365,11 +372,20 @@ Loop:
 			ungetToken();
 			TreeNode *q = parse_var_dec(statementNodeList);
 			nodeList.Push(q);
-			goto Loop;
+			TreeNode::s_curVarDecType = q->getChildByIndex(VarDecNode::VarDec_Type);
 		}
-		ungetToken();
+		else  {
+			ungetToken();
+		}
 	}
-	ungetToken();
+
+	token = getToken();
+	while (token.lexeme == ",")  {
+		TreeNode *q = parse_var_dec(statementNodeList);
+		nodeList.Push(q);
+		token = getToken();
+	}
+	TreeNode::s_curVarDecType = nullptr;
 	return nodeList.getHeadNode();
 }
 
@@ -377,8 +393,19 @@ Parser::TreeNode *Parser::parse_var_dec(TreeNodeList& statementNodeList)
 {
 	TreeNode *t = new VarDecNode();
 	Scanner::Token token;
-	t->addChild(parse_type(), VarDecNode::VarDec_Type);
-	t->addChild(parse_var_name_list(), VarDecNode::VarDec_Name);
+	TreeNode* node_type = parse_type();
+	if (TreeNode::s_curVarDecType )  {
+		if (TreeNode::s_curVarDecType != node_type)  {
+			ungetToken();
+			node_type = TreeNode::s_curVarDecType->clone();
+		}
+	}
+	t->addChild(node_type, VarDecNode::VarDec_Type);
+	
+	token = getToken();
+	TreeNode* node_name = new TreeNode();
+	node_name->setToken(token);
+	t->addChild(node_name, VarDecNode::VarDec_Name);
 	token = getToken();
 	if (token.lexeme == "=")  {
 		ungetToken();
@@ -391,10 +418,11 @@ Parser::TreeNode *Parser::parse_var_dec(TreeNodeList& statementNodeList)
 			routineBody->addStatement(node);
 		}
 	}
-	else if (token.lexeme != ";") {
+	else if (token.lexeme != ";" && token.lexeme != ","){
 		syntaxError(_strCurParserFileName, ";", token);
 		return t;
 	}
+	ungetToken();
 	return t;
 }
 
@@ -421,6 +449,8 @@ Parser::TreeNode *Parser::parse_statements()
 			}
 			else  {
 				isVarDec = false;
+				ungetToken();
+				ungetToken();
 			}
 		}
 		else if (token.kind == Scanner::ID) {
@@ -431,7 +461,7 @@ Parser::TreeNode *Parser::parse_statements()
 				TreeNode *q = parse_statement();
 				nodeList.Push(q);
 				SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
-				routineBody->addStatement(q);
+				routineBody->addStatement(q);     //在if while等语句中不会被添加,因为nodeList会返回
 			}
 			else {
 				ungetToken();
@@ -512,18 +542,6 @@ Parser::TreeNode *Parser::parse_assign_statement()
 	TreeNode *t = new AssignStatement();
 	TreeNode* left_val = parse_left_value();
 	t->addChild(left_val, AssignStatement::AssignLetf);
-	auto pCurBody = TreeNode::getCurSubroutineBodyNode();
-	auto pCurRoutine = TreeNode::getCurSubroutineNode();
-	auto pCurClass = TreeNode::getCurCurClassNode();
-	if (!pCurClass->hasVarDecInField(left_val) &&
-		!pCurRoutine->hasVarDecInParams(left_val) &&
-		!pCurBody->hasVarDec(left_val))  {                   //为了能让 int a= 1, b=2;工作  为了保证b也有类型,必须先查找类变量,函数参数,没有就添加上一个的类型
-		auto new_left_val = new VarDecNode();
-		GramTreeNodeBase* new_var_type = pCurBody->getCurVarDec()->getChildByIndex(VarDecNode::VarDec_Type)->clone();
-		new_left_val->addChild(new_var_type, VarDecNode::VarDec_Type);
-		new_left_val->addChild(left_val, VarDecNode::VarDec_Name);
-		pCurBody->addVarDec(new_left_val);
-	}
 	Scanner::Token token = getToken();
 	t->addChild(parse_expression(), AssignStatement::AssignRight);
 	token = getToken();

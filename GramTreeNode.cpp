@@ -1,7 +1,7 @@
 #include "Scanner.h"
 #include "GramTreeNode.h"
 
-
+GramTreeNodeBase* GramTreeNodeBase::s_curVarDecType = nullptr;
 stack<ClassTreeNode*> GramTreeNodeBase::s_stackCurClassZone;
 stack<SubroutineDecNode*> GramTreeNodeBase::s_stackCurSubroutineZone;
 stack<SubroutineBodyNode*> GramTreeNodeBase::s_stackCurSubroutineBodyZone;
@@ -122,10 +122,16 @@ void GramTreeNodeBase::quitSubRoutineBodyZone()
 
 
 
-CompondStatement* GramTreeNodeBase::getCurCompoundStatmentNode()  
+CompondStatement* GramTreeNodeBase::getCurCompoundStatmentNode(int* pNum)  
 {
 	if (s_stackCurCompoundStatmentZone.size() == 0)  {
+		if (pNum)  { 
+			*pNum = 0; 
+		}
 		return nullptr;
+	}
+	if (pNum)  { 
+		*pNum = s_stackCurCompoundStatmentZone.size(); 
 	}
 	return s_stackCurCompoundStatmentZone.top();
 }
