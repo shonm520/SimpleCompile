@@ -124,6 +124,9 @@ public:
 	NodeKind getNodeKind()  {
 		return _nodeKind;
 	}
+	short getChildIndex()  {
+		return _childIndex;
+	}
 	int getNodeIndex()  {
 		return _nodeIndex;
 	}
@@ -178,7 +181,7 @@ public:
 	}
 
 
-	static GramTreeNodeBase* s_curVarDecType;                                  //当前的类型声明,用于解析int a=1,b=2;b的类型
+	static GramTreeNodeBase* s_curVarDecType;                                //当前的类型声明,用于解析int a=1,b=2;b的类型
 
 	static stack<ClassTreeNode*> s_stackCurClassZone;                        //当前类的作用域
 	static ClassTreeNode* getCurCurClassNode();
@@ -201,6 +204,9 @@ public:
 	static CompondStatement* getCurCompoundStatmentNode(int* pNum = 0);  
 	static void insertCompoundStatmentNode(CompondStatement* node);
 	static void quitCompoundStatmentZone();
+
+	static bool isInCompound(GramTreeNodeBase* node);       //在整个复合语句,为什么要区分体,因为if(a > 0) {int a = 3;}  这两个作用域不一样
+	static bool isInCompoundBody(GramTreeNodeBase* node);   //在复合语句的体
 };
 
 
@@ -216,45 +222,15 @@ public:
 	TreeNodeList()  {
 		_head = _cur = nullptr;
 	}
-	void Push(TreeNode* node)  {     //这里添加一个参数....
-		if (node != nullptr)  {
-			if (_head == nullptr)  {
-				TreeNode* curNode = getCurNode(node);
-				if (curNode != node)  {  //要加入的节点是个链节点则要拆散一个一个的加
-					_head = node;
-					_cur = curNode;
-				}
-				else  {
-					_head = _cur = node;
-				}
-			}
-			else  {
-				TreeNode* curNode = getCurNode(node);  //节点的当前节点,即最后一个节点
-				if (curNode != node)  {                //要加入的节点是个链节点则要拆散一个一个的加
-					_cur->setNextNode(node);
-					_cur = curNode;
-				}
-				else  {
-					_cur->setNextNode(node);
-					_cur = node;
-				}
-			}
-		}
-	}
+	void Push(TreeNode* node);
 	TreeNode* getHeadNode()  {
 		return _head;
 	}
 	TreeNode* getCurNode()  {
 		return _cur;
 	}
-	static TreeNode* getCurNode(TreeNode* node)  {
-		TreeNode* curNode = nullptr;
-		while (node)  {
-			curNode = node;
-			node = node->getNextNode();
-		}
-		return curNode;
-	}
+	TreeNode* joinBy(TreeNodeList* node2);   //合并,第二个接上第一个,返回第一个的头
+	static TreeNode* getCurNode(TreeNode* node);
 };
 
 
@@ -285,6 +261,107 @@ public:
 };
 
 
+class VarDecNode : public GramTreeNodeBase  {   //变量声明节点
+public:
+	VarDecNode() : GramTreeNodeBase()  {
+		_nodeKind = VAR_DEC_K;
+	}
+	enum EVarDec  {
+		VarDec_Type = 0,
+		VarDec_Name
+	};
+	virtual ~VarDecNode(){}
+	GramTreeNodeBase* getVarDecType();    //变量的声明
+	GramTreeNodeBase* getVarDecName();    //变量的名字
+
+};
+
+
+class ParamNode : public VarDecNode  {    //形参节点
+public:
+	ParamNode() : VarDecNode()  {
+		_nodeKind = PARAM_K;
+	}
+	virtual ~ParamNode(){}
+};
+
+
+class AssignStatement : public GramTreeNodeBase  {    //赋值语句节点
+public:
+	AssignStatement() : GramTreeNodeBase()  {
+		_nodeKind = ASSIGN_K;
+	}
+	virtual ~AssignStatement(){}
+	enum AStatement  {
+		AssignLetf = 0,
+		AssignRight
+	};
+
+	virtual GramTreeNodeBase* getChildByTag(string name) override;
+	GramTreeNodeBase* getAssginLeft();
+	GramTreeNodeBase* getAssginRight();
+};
+
+
+class CompondStatement : public GramTreeNodeBase  {    //赋值语句节点
+public:
+	CompondStatement(int nK) : GramTreeNodeBase(nK)  {
+		insertCompoundStatmentNode(this);
+	}
+
+	enum CompondStmt  {
+		eExpress = 0,
+		eBlockBody
+	};
+
+	virtual ~CompondStatement(){}
+
+};
+
+
+class BaseBlockBody : public GramTreeNodeBase  {          //块,也有变量,语句
+public:
+	BaseBlockBody() : GramTreeNodeBase()  {
+	}
+	virtual ~BaseBlockBody(){}
+
+	enum BlockBody  {
+		VarDec = 0,
+		Statement
+	};
+
+	TreeNodeList _statementList;
+	TreeNodeList _varDecList;
+	void addStatement(GramTreeNodeBase* node)  {
+// 		if (getCurCompoundStatmentNode() == nullptr)  {     //没有复合语句(if,while等)才添加子语句,因为在if语句中会作为子语句被添加的
+// 			_statementList.Push(node);
+// 		}
+		_statementList.Push(node);
+	}
+	void addVarDec(GramTreeNodeBase* node)  {
+// 		if (getCurCompoundStatmentNode() == nullptr)  {     //没有复合语句(if,while等)才添加子语句,因为在if语句中会作为子语句被添加的
+// 			_varDecList.Push(node);
+// 		}
+		_varDecList.Push(node);
+	}
+	void addBodyChild()  {
+		GramTreeNodeBase::addChild(_varDecList.getHeadNode(), VarDec);
+		GramTreeNodeBase::addChild(_statementList.getHeadNode(), Statement);
+	}
+};
+
+class CompondStmtBody : public BaseBlockBody  {
+public:
+	CompondStmtBody() : BaseBlockBody()  {
+
+	}
+	virtual ~CompondStmtBody(){}
+
+
+};
+
+
+
 class SubroutineBodyNode;
 
 class SubroutineDecNode : public GramTreeNodeBase  {     //整个函数的节点
@@ -313,94 +390,18 @@ public:
 	bool hasVarDecInParams(GramTreeNodeBase* node);       //函数的变量是否在参数列表中
 };
 
-class VarDecNode;
 
-class SubroutineBodyNode : public GramTreeNodeBase  {    //函数体节点
+class SubroutineBodyNode : public BaseBlockBody  {    //函数体节点
 public:
-	SubroutineBodyNode() : GramTreeNodeBase()  {
+	SubroutineBodyNode() : BaseBlockBody()  {
 		_nodeKind = SUBROUTINE_BODY_K;
 		insertSubRoutineBodyNode(this);
 	}
 	virtual ~SubroutineBodyNode(){}
 
-	enum SubroutineBody  {
-		VarDec = 0,
-		Statement
-	};
-
-	TreeNodeList _statementList;
-	TreeNodeList _varDecList;
-	void addStatement(GramTreeNodeBase* node)  {
-		if (getCurCompoundStatmentNode() == nullptr)  {     //没有复合语句(if,while等)才添加子语句,因为在if语句中会作为子语句被添加的
-			_statementList.Push(node);
-		}
-	}
-	void addVarDec(GramTreeNodeBase* node)  {
-		_varDecList.Push(node);
-	}
-	void addBodyChild()  {
-		GramTreeNodeBase::addChild(_varDecList.getHeadNode(), VarDec);
-		GramTreeNodeBase::addChild(_statementList.getHeadNode(), Statement);
-	}
+	
 	bool hasVarDec(GramTreeNodeBase* node);
 	VarDecNode* getCurVarDec();
 
 	int getFuncLocalsNum();
 };
-
-
-class AssignStatement : public GramTreeNodeBase  {    //赋值语句节点
-public:
-	AssignStatement() : GramTreeNodeBase()  {
-		_nodeKind = ASSIGN_K;
-	}
-	virtual ~AssignStatement(){}
-	enum AStatement  {
-		AssignLetf = 0,
-		AssignRight
-	};
-
-	virtual GramTreeNodeBase* getChildByTag(string name) override;
-	GramTreeNodeBase* getAssginLeft();
-	GramTreeNodeBase* getAssginRight();
-};
-
-
-class CompondStatement : public GramTreeNodeBase  {    //赋值语句节点
-public:
-	CompondStatement(int nK) : GramTreeNodeBase(nK)  {
-		insertCompoundStatmentNode(this);
-	}
-	virtual ~CompondStatement(){}
-
-};
-
-
-
-
-class VarDecNode : public GramTreeNodeBase  {   //变量声明节点
-public:
-	VarDecNode() : GramTreeNodeBase()  {
-		_nodeKind = VAR_DEC_K;
-	}
-	enum EVarDec  {
-		VarDec_Type = 0,
-		VarDec_Name
-	};
-	virtual ~VarDecNode(){}
-	GramTreeNodeBase* getVarDecType();    //变量的声明
-	GramTreeNodeBase* getVarDecName();    //变量的名字
-
-};
-
-
-
-
-class ParamNode : public VarDecNode  {    //形参节点
-public:
-	ParamNode() : VarDecNode()  {
-		_nodeKind = PARAM_K;
-	}
-	virtual ~ParamNode(){}
-};
-

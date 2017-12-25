@@ -97,78 +97,6 @@ void Analyzer::checkExpression(Parser::TreeNode *t)
 				t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::FUNCTION_CALL_K);
 			}
 			break;
-
-            /*if (t->getLexeme().find('.') == string::npos)     // 这里要支持静态函数不用点调用
-            {
-                string functionName = t->getLexeme();    // 先检查函数有没有在当前类中声明
-				if (_pSymbolTable->findClassesTable(strClassName, functionName) == SymbolTable::None)
-                {
-					error7(strClassName, strClassName, t->getRow(), functionName);   //没有该方法
-                    break;
-                }
-				SymbolTable::Kind currentFunctionKind = _pSymbolTable->findClassesTable(strClassName, _strCurFunctionName).kind;
-                SymbolTable::Kind calledFunctionKind = _pSymbolTable->findClassesTable(strClassName, functionName).kind;
-                
-                if (currentFunctionKind == SymbolTable::FUNCTION && calledFunctionKind == SymbolTable::FUNCTION)   // 再检查当前子过程和被调用过程是否都是method
-                {
-                    error8(strClassName, t->getRow(), functionName);  //把方法作为函数调用
-                    break;
-                }
-                SymbolTable::Info info = _pSymbolTable->findClassesTable(strClassName, functionName);         // 再检查函数的参数是否正确
-                checkArguments(t, info.args, functionName);
-				t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::METHOD_CALL_K);
-            }
-            else                                            // call_statement -> ID . ID ( expressions ) 
-            {
-                string callerName = Parser::getCallerName(t->getLexeme());      // 先检查caller
-                string functionName = Parser::getFunctionName(t->getLexeme());
-                if (_pSymbolTable->isClassType(callerName) == true)             // 如果caller是类
-                {
-                    SymbolTable::Info info = _pSymbolTable->findClassesTable(callerName, functionName);   // 再检查function
-                    if (info == SymbolTable::None)
-                    {
-                        error7(strClassName, callerName, t->getRow(), functionName);
-                        break;
-                    }
-                    if (info.kind == SymbolTable::METHOD)
-                    {
-                        error9(strClassName, callerName, t->getRow(), functionName);
-                        break;
-                    }
-                    checkArguments(t, info.args, functionName);  // 再检查参数
-                    if (info.kind == SymbolTable::FUNCTION)
-                        t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::FUNCTION_CALL_K);
-                    else if (info.kind == SymbolTable::CONSTRUCTOR)
-						t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::CONSTRUCTOR_CALL_K);
-                }
-                else                                                   // 如果调用者是对象
-                {
-                    SymbolTable::Info objInfo = _pSymbolTable->findInSubroutineTable(callerName);  // 再检查caller有没有被声明
-                    if (objInfo == SymbolTable::None)
-                    {
-                        objInfo = _pSymbolTable->findClassesTable(strClassName, callerName);
-                        if (objInfo == SymbolTable::None)
-                        {
-                            error5(strClassName, t->getRow(), callerName);
-                            break;
-                        }
-                    }
-                    SymbolTable::Info functionInfo = _pSymbolTable->findClassesTable(objInfo.type, functionName);   // 再检查function
-                    if (functionInfo == SymbolTable::None)
-                    {
-                        error7(strClassName, callerName, t->getRow(), functionName);
-                        break;
-                    }
-                    if (functionInfo.kind != SymbolTable::METHOD)
-                    {
-                        error10(strClassName, callerName, t->getRow(), functionName);
-                        break;
-                    }
-                    checkArguments(t, functionInfo.args, functionName);   // 再检查参数
-					t->getChildByIndex(0)->setNodeKind(GramTreeNodeBase::METHOD_CALL_K);
-                }
-            }
-            break;*/
         }
         }
     }
@@ -306,13 +234,24 @@ void Analyzer::buildStatements(Parser::TreeNode *t)
 {
     while (t != nullptr)
     {
-        _pSymbolTable->insertSubroutineTable(t);
+		if (t->isInCompoundBody(t))  {
+			_pSymbolTable->enterMapInfoBlock(t->getClassName(), t->getNodeIndex(), t->getClassName() + "_Compound_Stmt");
+		}
+        _pSymbolTable->insertWholeTreeTable(t);
         checkStatement(t);
         for (int i = 0; i < 5; i++)
             buildStatements(t->getChildByIndex(i));
 
-		if (t->getNodeKind() == GramTreeNodeBase::SUBROUTINE_DEC_K)  {
-			t->quitSubRoutineBodyZone();
+		if (t->getNodeKind() == GramTreeNodeBase::CLASS_K)  {
+			string str = " class_area";
+			_pSymbolTable->quitMapInfoBlock(t->getNodeIndex(), t->getClassName() + str);
+		}
+		else if (t->getNodeKind() == GramTreeNodeBase::SUBROUTINE_DEC_K)  {
+			string str = " funtion_body";
+			_pSymbolTable->quitMapInfoBlock(t->getNodeIndex(), t->getClassName() + str);
+		}
+		else if (t->isInCompoundBody(t))  {
+			_pSymbolTable->quitMapInfoBlock(t->getNodeIndex(), t->getClassName() + " compound_body");
 		}
         t = t->getNextNode();
     }

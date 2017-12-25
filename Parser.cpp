@@ -412,11 +412,11 @@ Parser::TreeNode *Parser::parse_var_dec(TreeNodeList& statementNodeList)
 		ungetToken();
 		TreeNode* node = parse_assign_statement();
 		statementNodeList.Push(node);
-		SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
-		if (routineBody)  {             //在声明处的赋值语句就要放到函数体的赋值语句中去 ie: int a = 1 分解为两个语句 
-			node->setParentNode(routineBody);
-			routineBody->addStatement(node);
-		}
+// 		SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
+// 		if (routineBody)  {             //在声明处的赋值语句就要放到函数体的赋值语句中去 ie: int a = 1 分解为两个语句 
+// 			node->setParentNode(routineBody);
+// 			routineBody->addStatement(node);
+// 		}
 	}
 	else if (token.lexeme != ";" && token.lexeme != ","){
 		syntaxError(_strCurParserFileName, ";", token);
@@ -428,7 +428,14 @@ Parser::TreeNode *Parser::parse_var_dec(TreeNodeList& statementNodeList)
 
 Parser::TreeNode *Parser::parse_statements()
 {
-	TreeNodeList nodeList;          //在if while语句中仍然需要保存子语句
+	//TreeNodeList nodeStmtList;          //在if while语句中仍然需要保存子语句,仅仅在if while 语句中传出
+	//TreeNodeList nodeVarDecList;
+
+	CompondStmtBody* nodeBlock = nullptr;
+	if (TreeNode::getCurCompoundStatmentNode())  {
+		nodeBlock = new CompondStmtBody();
+	}
+
 	Scanner::Token token = getToken();
 	bool isVarDec = true;
 	while (token.lexeme == "if" || token.lexeme == "while" || token.lexeme == "return" || token.kind == Scanner::ID || 
@@ -437,14 +444,24 @@ Parser::TreeNode *Parser::parse_statements()
 			_hasRetStatement = true;
 		if (isVarDec && (isBasicType(token.lexeme) || token.kind == Scanner::ID))  {   //变量声明int a = 2;或者类声明String s
 			ungetToken();
-			TreeNode* q = parse_var_dec_list(nodeList);
+			TreeNodeList nodeStmtListInVarDec;          
+			TreeNode* q = parse_var_dec_list(nodeStmtListInVarDec);    //int a = 2;这个声明和赋值在一起时要把赋值传出来
 			if (q)  {
-				SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
-				if (routineBody)  {
-					if (routineBody->getNodeKind() == SUBROUTINE_BODY_K)  {
-						q->setParentNode(routineBody);
-						routineBody->addVarDec(q);
+				if (!TreeNode::getCurCompoundStatmentNode())  {    //不在复合语句中
+					SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
+					if (routineBody)  {
+						if (routineBody->getNodeKind() == SUBROUTINE_BODY_K)  {
+							//q->setParentNode(routineBody);
+							routineBody->addVarDec(q);
+							routineBody->addStatement(nodeStmtListInVarDec.getHeadNode());
+						}
 					}
+				}
+				else  {
+					//nodeVarDecList.Push(q);
+					//nodeStmtList.Push(nodeStmtListInVarDec.getHeadNode());
+					nodeBlock->addVarDec(q);
+					nodeBlock->addStatement(nodeStmtListInVarDec.getHeadNode());
 				}
 			}
 			else  {
@@ -459,9 +476,14 @@ Parser::TreeNode *Parser::parse_statements()
 				ungetToken();
 				ungetToken();
 				TreeNode *q = parse_statement();
-				nodeList.Push(q);
-				SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
-				routineBody->addStatement(q);     //在if while等语句中不会被添加,因为nodeList会返回
+				if (!TreeNode::getCurCompoundStatmentNode())  {
+					SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
+					routineBody->addStatement(q);     //在if while等语句中不会被添加,因为nodeList会返回
+				}
+				else  {
+					//nodeStmtList.Push(q);
+					nodeBlock->addStatement(q);
+				}
 			}
 			else {
 				ungetToken();
@@ -472,9 +494,14 @@ Parser::TreeNode *Parser::parse_statements()
 		else {
 			ungetToken();
 			TreeNode *q = parse_statement();
-			nodeList.Push(q);
-			SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
-			routineBody->addStatement(q);
+			if (!TreeNode::getCurCompoundStatmentNode())  {
+				SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
+				routineBody->addStatement(q);
+			}
+			else  {
+				//nodeStmtList.Push(q);
+				nodeBlock->addStatement(q);
+			}
 			isVarDec = true;
 		}
 		token = getToken();
@@ -482,7 +509,13 @@ Parser::TreeNode *Parser::parse_statements()
 	ungetToken();
 	SubroutineBodyNode* routineBody = TreeNode::getCurSubroutineBodyNode();
 	routineBody->addBodyChild();
-	return nodeList.getHeadNode();
+	if (TreeNode::getCurCompoundStatmentNode())  {
+		nodeBlock->addBodyChild();
+		return nodeBlock;
+	}
+	return nullptr;
+	//return nodeVarDecList.joinBy(&nodeStmtList);
+	//return nodeStmtList.getHeadNode();
 }
 
 Parser::TreeNode *Parser::parse_statement()

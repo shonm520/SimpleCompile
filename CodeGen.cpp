@@ -19,7 +19,10 @@ void CodeGen::write(Parser::TreeNode *t)
         return;
     while (t != nullptr)
     {
-        symbolTable->insertSubroutineTable(t);
+		if (t->isInCompound(t))  {
+			symbolTable->enterMapInfoBlock(t->getClassName(), t->getNodeIndex(), t->getClassName() + "_Compound_Stmt");
+		}
+        symbolTable->insertWholeTreeTable(t);
         translate(t);
         for (int i = 0; i < 5; i++)
         {
@@ -27,6 +30,19 @@ void CodeGen::write(Parser::TreeNode *t)
             write(t->getChildByIndex(i));
             depth--;
         }
+
+		if (t->getNodeKind() == GramTreeNodeBase::CLASS_K)  {
+			string str = " class_area";
+			symbolTable->quitMapInfoBlock(t->getNodeIndex(), t->getClassName() + str);
+		}
+		else if (t->getNodeKind() == GramTreeNodeBase::SUBROUTINE_DEC_K)  {
+			string str = " funtion_body";
+			symbolTable->quitMapInfoBlock(t->getNodeIndex(), t->getClassName() + str);
+		}
+		else if (t->isInCompound(t))  {
+			symbolTable->quitMapInfoBlock(t->getNodeIndex(), t->getClassName() + " compound_body");
+		}
+
         t = t->getNextNode();
     }
 }
@@ -150,7 +166,8 @@ void CodeGen::translate(Parser::TreeNode *t)
         writeExpression(t->getChildByIndex(0));
         writeArithmetic(NOT);
         writeIf(whileEnd);
-        for (auto p = t->getChildByIndex(1); p != nullptr; p = p->getNextNode())
+		symbolTable->insertWholeTreeTable(t->getChildByIndex(CompondStatement::eBlockBody)->getChildByIndex(BaseBlockBody::VarDec));
+		for (auto p = t->getChildByIndex(CompondStatement::eBlockBody)->getChildByIndex(BaseBlockBody::Statement); p != nullptr; p = p->getNextNode())
             translate(p);
         writeGoto(whileBegin);
         writeLabel(whileEnd);
@@ -170,7 +187,8 @@ void CodeGen::translate(Parser::TreeNode *t)
         writeIf(L1);
         writeGoto(L2);
         writeLabel(L1);
-        for (auto p = t->getChildByIndex(1); p != nullptr; p = p->getNextNode())
+		symbolTable->insertWholeTreeTable(t->getChildByIndex(CompondStatement::eBlockBody)->getChildByIndex(BaseBlockBody::VarDec));
+		for (auto p = t->getChildByIndex(CompondStatement::eBlockBody)->getChildByIndex(BaseBlockBody::Statement); p != nullptr; p = p->getNextNode())
             translate(p);
         if (t->getChildByIndex(2) == nullptr)
             writeLabel(L2);
@@ -178,7 +196,7 @@ void CodeGen::translate(Parser::TreeNode *t)
         {
             writeGoto(L3);
             writeLabel(L2);
-            for (auto p = t->getChildByIndex(2); p != nullptr; p = p->getNextNode())
+			for (auto p = t->getChildByIndex(2)->getChildByIndex(BaseBlockBody::Statement); p != nullptr; p = p->getNextNode())
                 translate(p);
             writeLabel(L3);
         }

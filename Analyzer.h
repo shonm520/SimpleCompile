@@ -19,6 +19,7 @@ private:
     void checkExpression(Parser::TreeNode *t);
     void checkArguments(Parser::TreeNode *t, vector<string> parameter, string functionName);
     void checkMain();
+
 public:
     Analyzer(Parser::TreeNode *t);
     void check();

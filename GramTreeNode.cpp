@@ -99,7 +99,7 @@ void GramTreeNodeBase::quitSubRoutineZone()
 
 
 
-SubroutineBodyNode* GramTreeNodeBase::getCurSubroutineBodyNode()
+SubroutineBodyNode* GramTreeNodeBase::getCurSubroutineBodyNode()             //目前在哪个函数体中,用于非复合语句添加树,可以用于闭包
 {
 	if (s_stackCurSubroutineBodyZone.size() == 0)  {
 		return nullptr;
@@ -121,8 +121,36 @@ void GramTreeNodeBase::quitSubRoutineBodyZone()
 
 
 
+bool GramTreeNodeBase::isInCompoundBody(GramTreeNodeBase* node)
+{
+	if (node && node->getParentNode())  {
+		if (node->getParentNode()->getNodeKind() == GramTreeNodeBase::IF_STATEMENT_K ||
+			node->getParentNode()->getNodeKind() == GramTreeNodeBase::WHILE_STATEMENT_K)  {
+			if (node->getChildIndex() == 1)  {
+				return true;
+			}
+		}
+	}
+	return false;
+}
 
-CompondStatement* GramTreeNodeBase::getCurCompoundStatmentNode(int* pNum)  
+bool GramTreeNodeBase::isInCompound(GramTreeNodeBase* node)
+{
+	if (node)  {
+		if (node->getNodeKind() == GramTreeNodeBase::IF_STATEMENT_K ||
+			node->getNodeKind() == GramTreeNodeBase::WHILE_STATEMENT_K)  {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+
+
+
+
+CompondStatement* GramTreeNodeBase::getCurCompoundStatmentNode(int* pNum)     //目前在哪个if 或while体中,用于添加if while 的语句
 {
 	if (s_stackCurCompoundStatmentZone.size() == 0)  {
 		if (pNum)  { 
@@ -209,7 +237,7 @@ bool SubroutineDecNode::hasVarDecInParams(GramTreeNodeBase* node)
 
 int SubroutineBodyNode::getFuncLocalsNum()
 {
-	if (!getChildByIndex(SubroutineBody::VarDec))  {   //没有变量声明
+	if (!getChildByIndex(BaseBlockBody::VarDec))  {   //没有变量声明
 		return 0;
 	}
 	int nlocals = 0;
@@ -218,7 +246,7 @@ int SubroutineBodyNode::getFuncLocalsNum()
 			nlocals++;
 		}
 	}*/
-	for (auto q = getChildByIndex(SubroutineBody::VarDec); q != nullptr; q = q->getNextNode())  {
+	for (auto q = getChildByIndex(BaseBlockBody::VarDec); q != nullptr; q = q->getNextNode())  {
 		nlocals = nlocals + q->getChildByIndex(VarDecNode::EVarDec::VarDec_Name)->getSiblings();
 	}
 	return nlocals;
@@ -279,4 +307,66 @@ GramTreeNodeBase* VarDecNode::getVarDecType()
 GramTreeNodeBase* VarDecNode::getVarDecName()
 {
 	return _child[VarDecNode::VarDec_Name];
+}
+
+
+
+
+
+
+
+
+
+
+
+void TreeNodeList::Push(TreeNode* node)  
+{     
+	if (node != nullptr)  {
+		if (_head == nullptr)  {
+			TreeNode* curNode = getCurNode(node);
+			if (curNode != node)  {  //要加入的节点是个链节点则要拆散一个一个的加
+				_head = node;
+				_cur = curNode;
+			}
+			else  {
+				_head = _cur = node;
+			}
+		}
+		else  {
+			TreeNode* curNode = getCurNode(node);  //节点的当前节点,即最后一个节点
+			if (curNode != node)  {                //要加入的节点是个链节点则要拆散一个一个的加
+				_cur->setNextNode(node);
+				_cur = curNode;
+			}
+			else  {
+				_cur->setNextNode(node);
+				_cur = node;
+			}
+		}
+	}
+}
+
+TreeNode* TreeNodeList::getCurNode(TreeNode* node)  
+{
+	TreeNode* curNode = nullptr;
+	while (node)  {
+		curNode = node;
+		node = node->getNextNode();
+	}
+	return curNode;
+}
+
+TreeNode* TreeNodeList::joinBy(TreeNodeList* node2)
+{
+	if (_cur)  {
+		if (node2)  {
+			_cur->setNextNode(node2->getHeadNode());
+		}
+	}
+	else {
+		if (node2)  {
+			return node2->getHeadNode();
+		}
+	}
+	return _head;
 }
