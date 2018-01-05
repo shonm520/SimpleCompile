@@ -46,228 +46,104 @@ public:
 		}
 		return mapStrDes[nK];
 	}*/
-    /*class TreeNode
-    {
-	public:
-		static const int Child_Num_Const = 5;
-	private:
-		TreeNode *child_[Child_Num_Const];
-        TreeNode *next;
-        NodeKind nodeKind;
-		string   strNodeDes;
-		int    childIndex;   //子类的索引
-		TreeNode* parent;
-
-		enum  SubroutineFiled  {
-			Sign = 0,
-			Ret,
-			Name,
-			Params,
-			Body
-		};
-		enum SubroutineBody  {
-			VarDec = 0,
-			Statement
-		};
-		Scanner::Token token;
-	public:
-		//Scanner::Token token;
-		TreeNode(NodeKind nK = None)
-        {
-			nodeKind = nK;
-            next = nullptr;
-			strNodeDes = Kind2Des(nK);
-			childIndex = -1;
-			parent = nullptr;
-			memset(&child_, 0, sizeof(TreeNode*) * Child_Num_Const);
-        }
-		void SetToken(Scanner::Token& t)  {
-			token = t;
-		}
-		const string GetLexeme()  {
-			return token.lexeme;
-		}
-		void SetLexeme(string& str)  {
-			token.lexeme = str;
-		}
-		unsigned int GetRow()  {
-			return token.row;
-		}
-		void SetNodeKind(NodeKind kind)  {
-			nodeKind = kind;
-		}
-		NodeKind getNodeKind()  {
-			return nodeKind;
-		}
-		void SetNextNode(TreeNode* node)  {
-			next = node;
-		}
-		TreeNode* GetNextNode()  {
-			return next;
-		}
-		void AddChild(TreeNode* pChild, int ind = -1)  {
-			if (pChild)   {
-				if (ind >= 0)  {
-					child_[ind] = pChild;
-				}
-				pChild->childIndex = ind;
-				pChild->parent = this;
-			}
-		}
-		TreeNode* GetChildByIndex(int ind)  {
-			return child_[ind];
-		}
-
-		TreeNode* GetChild_SubroutineSign()  {    //标志,method,function,constructor
-			if (this->nodeKind == Parser::SUBROUTINE_DEC_K)  {
-				return child_[SubroutineFiled::Sign];
-			}
-			return nullptr;
-		}
-
-		TreeNode* GetChild_SubroutineName()  {
-			if (this->nodeKind == Parser::SUBROUTINE_DEC_K)  {
-				return child_[SubroutineFiled::Name];
-			}
-			return nullptr;
-		}
-
-		TreeNode* GetChild_SubroutineBody()  {
-			if (this->nodeKind == Parser::SUBROUTINE_DEC_K)  {
-				return child_[SubroutineFiled::Body];
-			}
-			return nullptr;
-		}
-		TreeNode* GetChild_SubroutineBody_VarDec()  {
-			if (this->nodeKind == Parser::SUBROUTINE_BODY_K)  {
-				return child_[SubroutineBody::VarDec];
-			}
-			return nullptr;
-		}
-
-		TreeNode* GetChild_AssignVarName()  {  //赋值语句的变量
-			if (this->nodeKind == Parser::ASSIGN_K)  {
-				return child_[0];
-			}
-			return nullptr;
-		}
-
-		TreeNode* GetChildByTag(string tag)  {
-			if (this->nodeKind == Parser::ASSIGN_K)  {
-				if (tag == "var_name")  {  //赋值时的变量名
-					return child_[0];
-				}
-				else if (tag == "var_rval")  { //赋值时的变量表达式或右值  
-					return child_[1];
-				}
-			}
-			return nullptr;
-		}
-		
-		int GetFuncLocalsNum()  {  //获取函数局部参数的个数
-			int nlocals = 0;
-			if (this->nodeKind == Parser::SUBROUTINE_DEC_K)  {
-				for (auto p = GetChild_SubroutineBody()->GetChild_SubroutineBody_VarDec(); p != nullptr; p = p->next)  {
-					for (auto q = p->GetChildByIndex(1); q != nullptr; q = q->next)  {
-						nlocals++;
-					}
-				}
-				return nlocals;
-			}
-			else if (this->nodeKind == Parser::SUBROUTINE_BODY_K)  {
-				for (auto q = GetChildByIndex(1); q != nullptr; q = q->next)  {
-					nlocals++;
-				}
-				return nlocals;
-			}
-
-			return 0;
-		}
-		
-    };*/
 
  	typedef GramTreeNodeBase TreeNode;
-// 
-// 	class TreeNodeList
-// 	{
-// 		TreeNode* _head;
-// 		TreeNode* _cur;
-// 	public:
-// 		TreeNodeList()  {
-// 			_head = _cur =  nullptr;
-// 		}
-// 		void Push(TreeNode* node)  {
-// 			if (node != nullptr)  {
-// 				if (_head == nullptr)  {
-// 					TreeNode* curNode = getCurNode(node);
-// 					if (curNode != node)  {  //要加入的节点是个链节点则要拆散一个一个的加
-// 						_head = node;
-// 						_cur = curNode;
-// 					}
-// 					else  {
-// 						_head = _cur = node;
-// 					}
-// 				}
-// 				else  {
-// 					TreeNode* curNode = getCurNode(node);  //节点的当前节点,即最后一个节点
-// 					if (curNode != node)  {                //要加入的节点是个链节点则要拆散一个一个的加
-// 						_cur->setNextNode(node);
-// 						_cur = curNode;
-// 					}
-// 					else  {
-// 						_cur->setNextNode(node);
-// 						_cur = node;
-// 					}
-// 				}
-// 			}
-// 		}
-// 		TreeNode* getHeadNode()  {
-// 			return _head;
-// 		}
-// 		TreeNode* getCurNode()  {
-// 			return _cur;
-// 		}
-// 		static TreeNode* getCurNode(TreeNode* node)  {
-// 			TreeNode* curNode = nullptr;
-// 			while (node)  {
-// 				curNode = node;
-// 				node = node->getNextNode();
-// 			}
-// 			return curNode;
-// 		}
-// 	}; 
 
 	struct CirQueue
 	{
 		CirQueue()  {
 			_index = 0;
 			_front = 0;
+			
+			_pScanner = nullptr;
+			_top = 0;
+			_cur = -1;
+			_peek = -1;
 		}
 		int _index;
 		int _front;
+		int _peek;
+		int _top, _cur;
+		Scanner* _pScanner;
 		static const int Cap = 20;
 		Scanner::Token _member[Cap];
+		void SetScanner(Scanner* ps)  {
+			_pScanner = ps;
+		}
 		static int Add(int n, int step = 1)  {
 			n = (n + Cap + step) % Cap;
 			return n;
 		}
-		void Push(Scanner::Token& node)  {
-			_member[_index] = node;
+// 		void Push(Scanner::Token& node)  {
+// 			_member[_front] = node;
+// 			_pScanner->nextToken();
+// 		}
+// 		void Back(int step)  {
+// 			_index = Add(_index, step * -1);
+// 		}
+// 		bool GetItemFromNew()  {
+// 			return _index == _front;
+// 		}
+// 		Scanner::Token GetCurrent() {
+// 			int ind = _index;
+// 			if (_index == _front)   {
+// 				_front = Add(_front);
+// 			}
+// 			_index = Add(_index);
+// 			return _member[ind];
+// 		}
+// 
+// 		Scanner::Token Peek()  {
+// 			_peek = _peek + 1;
+// 			if (_peek > _front)   {
+// 				_front = Add(_front);
+// 			}
+// 			return _member[_peek];
+// 		}
+
+
+		static void _add(int& n, int step = 1)  {
+			n = (n + Cap + step) % Cap;
 		}
-		void Back(int step)  {
-			_index = Add(_index, step * -1);
+
+		static bool _eq(int cur, int top)  {
+			return cur == top;
 		}
-		bool GetItemFromNew()  {
-			return _index == _front;
-		}
-		Scanner::Token GetFront() {
-			int ind = _index;
-			if (_index == _front)   {
-				_front = Add(_front);
+
+		Scanner::Token getCurrent()  {
+			_add(_cur);
+			if (_eq(_cur, _top))  {
+				Scanner::Token token = _pScanner->nextToken();
+				_member[_top] = token;
+				_add(_top);
 			}
-			_index = Add(_index);
-			return _member[ind];
+			resetPeek();
+			return _member[_cur];
 		}
+
+		Scanner::Token peekToken(bool reset)  {
+			if (reset)  {
+				resetPeek();
+			}
+			_add(_peek);
+			if (_eq(_peek, _top))  {
+				Scanner::Token token = _pScanner->nextToken();
+				_member[_top] = token;
+				_add(_top);
+			}
+			return _member[_peek];
+		}
+
+		void resetPeek()  {
+			_peek = _cur;
+		}
+		void back(int step = 1)  {
+			_add(_cur, step * -1);
+		}
+
+
+
+
 	};
 private:
     vector<string> _vtfilenames;
@@ -277,7 +153,12 @@ private:
     bool _hasRetStatement;                              // 要保证每个函数都有return语句, 即使返回值为void
 
     Scanner::Token getToken();                          // 从缓冲区中取出一个token
-    Scanner::Token ungetToken();                        // 把上一次取出的token放入到缓冲区中
+    void ungetToken();                        // 把上一次取出的token放入到缓冲区中
+	bool eatExpectedToken(string expected, Scanner::Token* pToken = nullptr);
+	bool eatExpectedToken(Scanner::TokenType type, Scanner::Token* pToken = nullptr);
+
+	Scanner::Token peekToken(bool reset);
+	//void resetPeek();
 
 	CirQueue _cirQueue;
     string getFullName(string name);                    // 返回

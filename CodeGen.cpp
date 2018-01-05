@@ -19,7 +19,7 @@ void CodeGen::write(Parser::TreeNode *t)
         return;
     while (t != nullptr)
     {
-		if (t->isInCompound(t))  {
+		if (t->isInCompound(t))  {    //和analyze不一样,会在子语句中生成
 			symbolTable->enterMapInfoBlock(t->getClassName(), t->getNodeIndex(), t->getClassName() + "_Compound_Stmt");
 		}
         symbolTable->insertWholeTreeTable(t);

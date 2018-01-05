@@ -40,15 +40,9 @@ public:
     };
     static Info None;
 private:
-    int _static_index;
-    int _field_index;
-    int _arg_index;
-    int _var_index;
     int _errorNum;
-    map<string, int> _mapClassIndex;                // 从类名到数组索引
-    vector<map<string, Info>> _vtClassesTable;     // 类符号表数组, 将一直保留着不会被销毁
+
     map<string, Info> _mapSubroutineTable;          // 函数符号表
-    string _strCurrentClass;        // 遍历语法树的时候, 保存当前类名称
     void initialSubroutineTable();          // 销毁函数符号表
     SymbolTable();
     static SymbolTable * instance;      // 指向符号表单实例对象

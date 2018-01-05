@@ -15,7 +15,7 @@ void syntaxError(string currentParserFilename, string expected, Scanner::Token t
 {
     errorNum++;
     cerr << "Error in class " << currentParserFilename << " in line " << token.row
-        << ": expect a " << expected << ", but got a " << token.lexeme << "\n";
+        << ": expect " << "\'" << expected << "\'" << ", but got " << "\'" << token.lexeme << "\'" << "\n";
 }
 
 // 类名和函数名不一致
